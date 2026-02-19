@@ -116,7 +116,7 @@ export async function askQuestionAction(_: ActionState | undefined, formData: Fo
     .single();
 
   if (error) {
-    return { error: error.message };
+    return { error: `Kunde inte publicera frågan: ${error.message}` };
   }
 
   if (inserted) {
