@@ -17,6 +17,7 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
   const next = String(formData.get("next") ?? "/dashboard");
+  const portal = String(formData.get("portal") ?? "agent");
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -25,20 +26,28 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
     return { error: error.message };
   }
 
-  if (next === "/" || !next) {
-    const { data: authData } = await supabase.auth.getUser();
-    if (authData.user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", authData.user.id)
-        .maybeSingle();
+  const { data: authData } = await supabase.auth.getUser();
+  const profile = authData.user
+    ? (
+        await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", authData.user.id)
+          .maybeSingle()
+      ).data
+    : null;
 
-      if (profile?.role === "admin") {
-        redirect("/admin");
-      }
-    }
-    redirect("/dashboard");
+  if (portal === "agent" && profile?.role !== "agent" && profile?.role !== "admin") {
+    await supabase.auth.signOut();
+    return { error: "Detta konto är inte registrerat som mäklare. Använd kundinloggning eller kontakta admin." };
+  }
+
+  const role = profile?.role ?? "agent";
+  const roleHome = role === "admin" ? "/admin" : "/dashboard";
+
+  const isSafeNext = typeof next === "string" && next.startsWith("/");
+  if (!isSafeNext || next === "/") {
+    redirect(roleHome);
   }
 
   redirect(next);
