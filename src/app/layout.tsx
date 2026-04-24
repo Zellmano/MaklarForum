@@ -4,8 +4,17 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
-  title: "Mäklarforum.se",
-  description: "Q&A-plattform för konsumenter och verifierade fastighetsmäklare i Sverige.",
+  title: {
+    default: "Mäklarforum.se – Frågor & svar om bostadsköp och försäljning",
+    template: "%s | Mäklarforum.se",
+  },
+  description: "Ställ frågor om bostadsköp och försäljning och få svar från verifierade fastighetsmäklare i Sverige. Guider, ordlista och mäklarprofiler.",
+  metadataBase: new URL("https://maklarforum.se"),
+  openGraph: {
+    type: "website",
+    locale: "sv_SE",
+    siteName: "Mäklarforum.se",
+  },
 };
 
 export default function RootLayout({

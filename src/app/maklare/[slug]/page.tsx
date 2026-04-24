@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getAgentBySlug, getAnswersByAgent, getAgentTipsByAuthor } from "@/lib/data";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const agent = await getAgentBySlug(slug);
+  if (!agent) return { title: "Mäklare hittades inte" };
+  const desc = `${agent.fullName} – ${agent.title} på ${agent.firm} i ${agent.city}. Verifierad mäklare på Mäklarforum.se.`;
+  return { title: agent.fullName, description: desc, openGraph: { title: agent.fullName, description: desc } };
+}
 
 export default async function AgentProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -13,6 +23,9 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ s
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+      <div className="lg:col-span-2">
+        <Link href="/maklare" className="text-sm text-[var(--accent)] hover:underline">← Alla mäklare</Link>
+      </div>
       <section className="card">
         <span className="pill pill-light">Verifierad mäklare</span>
         <h1 className="mt-3 text-3xl">{agent.fullName}</h1>
@@ -42,6 +55,7 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ s
 
       <section className="space-y-4">
         <h2 className="text-2xl">Senaste svar</h2>
+        {agentAnswers.length === 0 && <p className="text-sm text-[var(--muted)]">Inga svar ännu.</p>}
         {agentAnswers.map((answer) => (
           <article key={answer.id} className="card">
             <p className="text-xs text-[var(--muted)]">På frågan: {answer.question?.title ?? "-"}</p>
@@ -51,6 +65,7 @@ export default async function AgentProfilePage({ params }: { params: Promise<{ s
         ))}
 
         <h2 className="pt-2 text-2xl">Tips från mäklaren</h2>
+        {agentTips.length === 0 && <p className="text-sm text-[var(--muted)]">Inga tips ännu.</p>}
         {agentTips.map((tip) => (
           <article key={tip.id} className="card">
             <p className="text-xs text-[var(--muted)]">

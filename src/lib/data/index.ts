@@ -12,7 +12,8 @@ export async function getQuestions() {
   const { data, error } = await supabase
     .from("questions")
     .select("id, question_slug, title, body, asked_by, audience, category, geo_scope, municipality, region, created_at")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error || !data) {
     return mockQuestions;
@@ -185,7 +186,8 @@ export async function getAgents() {
     .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status")
     .eq("role", "agent")
     .eq("verification_status", "verified")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error || !data) {
     return mockAgents;
@@ -478,10 +480,13 @@ export async function getAgentGroupsForUser(userId: string): Promise<AgentGroup[
   }
 
   const groupIds = groups.map((group) => group.id);
-  const { data: allMembers } = await supabase.from("agent_group_members").select("group_id").in("group_id", groupIds);
+  const { data: memberCounts } = await supabase
+    .from("agent_group_members")
+    .select("group_id")
+    .in("group_id", groupIds);
   const memberCountMap = new Map<string, number>();
-  for (const member of allMembers ?? []) {
-    memberCountMap.set(member.group_id, (memberCountMap.get(member.group_id) ?? 0) + 1);
+  for (const row of memberCounts ?? []) {
+    memberCountMap.set(row.group_id, (memberCountMap.get(row.group_id) ?? 0) + 1);
   }
 
   const joined = new Set((memberships ?? []).map((row) => row.group_id));
@@ -607,13 +612,16 @@ export async function getWatchedThreads(userId: string): Promise<WatchedThread[]
   }
 
   const questionIds = watcherRows.map((row) => row.question_id);
-  const { data: questionRows } = await supabase
-    .from("questions")
-    .select("id, question_slug, title, created_at")
-    .in("id", questionIds);
-  const { data: answerRows } = await supabase.from("answers").select("question_id").in("question_id", questionIds);
+  const [{ data: questionRows }, { data: answerRows }] = await Promise.all([
+    supabase.from("questions").select("id, question_slug, title, created_at").in("id", questionIds),
+    supabase.from("answers").select("question_id").in("question_id", questionIds),
+  ]);
 
   const questionMap = new Map((questionRows ?? []).map((row) => [row.id, row]));
+  const answerCountMap = new Map<string, number>();
+  for (const row of answerRows ?? []) {
+    answerCountMap.set(row.question_id, (answerCountMap.get(row.question_id) ?? 0) + 1);
+  }
 
   return watcherRows
     .map((watch) => {
@@ -625,7 +633,7 @@ export async function getWatchedThreads(userId: string): Promise<WatchedThread[]
         questionSlug: question.question_slug,
         title: question.title,
         createdAt: question.created_at,
-        answerCount: answerRows?.filter((answer) => answer.question_id === question.id).length ?? 0,
+        answerCount: answerCountMap.get(question.id) ?? 0,
       };
     })
     .filter((row): row is WatchedThread => Boolean(row));
@@ -641,7 +649,8 @@ export async function getMessageThreads(userId: string): Promise<MessageThread[]
     .from("messages")
     .select("id, sender_id, receiver_id, body, read_at, created_at")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (!rows || rows.length === 0) {
     return [];
@@ -708,7 +717,8 @@ export async function getConversation(userId: string, otherUserId: string): Prom
     .from("messages")
     .select("id, sender_id, receiver_id, body, created_at, read_at")
     .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(500);
 
   if (!rows || rows.length === 0) {
     return [];
@@ -753,7 +763,8 @@ export async function getVerifiedAgentRecipients() {
     .select("id, full_name, city, firm")
     .eq("role", "agent")
     .eq("verification_status", "verified")
-    .order("full_name", { ascending: true });
+    .order("full_name", { ascending: true })
+    .limit(500);
 
   return (data ?? []).map((agent) => ({
     id: agent.id,
@@ -827,7 +838,66 @@ export async function getAgentTips(viewerId?: string, limit = 20): Promise<Agent
     });
 }
 
-export async function getAgentTipsByAuthor(authorId: string, viewerId?: string) {
-  const all = await getAgentTips(viewerId, 100);
-  return all.filter((tip) => tip.authorId === authorId);
+export async function getAgentTipsByAuthor(authorId: string, viewerId?: string): Promise<AgentTip[]> {
+  if (!hasSupabaseEnv()) {
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: rows } = await supabase
+    .from("agent_tips")
+    .select("id, author_id, title, body, audience, geo_scope, municipality, region, created_at")
+    .eq("author_id", authorId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (!rows || rows.length === 0) {
+    return [];
+  }
+
+  const tipIds = rows.map((row) => row.id);
+  const [{ data: voteRows }, { data: myVotes }] = await Promise.all([
+    supabase.from("agent_tip_votes").select("tip_id, vote").in("tip_id", tipIds),
+    viewerId
+      ? supabase.from("agent_tip_votes").select("tip_id, vote").eq("consumer_id", viewerId).in("tip_id", tipIds)
+      : Promise.resolve({ data: [] as Array<{ tip_id: string; vote: number }> }),
+  ]);
+
+  const voteMap = new Map<string, { up: number; down: number }>();
+  for (const vote of voteRows ?? []) {
+    const bucket = voteMap.get(vote.tip_id) ?? { up: 0, down: 0 };
+    if (vote.vote === 1) bucket.up += 1;
+    if (vote.vote === -1) bucket.down += 1;
+    voteMap.set(vote.tip_id, bucket);
+  }
+
+  const myVoteMap = new Map<string, -1 | 0 | 1>();
+  for (const vote of myVotes ?? []) {
+    myVoteMap.set(vote.tip_id, vote.vote === -1 ? -1 : 1);
+  }
+
+  return rows
+    .map((row) => {
+      const votes = voteMap.get(row.id) ?? { up: 0, down: 0 };
+      return {
+        id: row.id,
+        authorId: row.author_id,
+        authorName: "",
+        title: row.title,
+        body: row.body,
+        audience: row.audience,
+        geoScope: row.geo_scope,
+        municipality: row.municipality ?? undefined,
+        region: row.region ?? undefined,
+        score: votes.up - votes.down,
+        upVotes: votes.up,
+        downVotes: votes.down,
+        myVote: myVoteMap.get(row.id) ?? 0,
+        createdAt: row.created_at,
+      };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 }

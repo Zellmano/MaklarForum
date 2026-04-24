@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { AnswerComposer } from "@/components/answer-composer";
 import { WatchThreadButton } from "@/components/watch-thread-button";
 import { AnswerVoteControls } from "@/components/answer-vote-controls";
@@ -8,6 +10,17 @@ import { submitAnswerAction } from "@/app/fragor/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const question = await getQuestionBySlug(slug);
+  if (!question) return { title: "Fråga hittades inte" };
+  return {
+    title: question.title,
+    description: question.body.slice(0, 160),
+    openGraph: { title: question.title, description: question.body.slice(0, 160) },
+  };
+}
 
 const geoScopeLabels: Record<string, string> = {
   local: "Lokal",
@@ -56,6 +69,9 @@ export default async function QuestionDetail({ params }: { params: Promise<{ slu
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="lg:col-span-2">
+        <Link href="/fragor" className="text-sm text-[var(--accent)] hover:underline">← Alla frågor</Link>
+      </div>
       <section className="card">
         {currentUser ? (
           <p className="mb-2 text-xs text-[var(--muted)]">

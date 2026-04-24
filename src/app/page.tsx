@@ -37,6 +37,9 @@ export default async function Home() {
           </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
+          {questions.length === 0 && (
+            <p className="col-span-2 text-sm text-[var(--muted)]">Inga frågor publicerade ännu.</p>
+          )}
           {questions.slice(0, 4).map((question) => (
             <QuestionCard key={question.id} question={question} />
           ))}
@@ -51,6 +54,9 @@ export default async function Home() {
           </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
+          {agents.length === 0 && (
+            <p className="col-span-3 text-sm text-[var(--muted)]">Inga verifierade mäklare ännu.</p>
+          )}
           {agents.slice(0, 3).map((agent) => (
             <AgentCard key={agent.id} agent={agent} />
           ))}

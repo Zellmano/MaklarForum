@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { QuestionCard } from "@/components/question-card";
 import { TipVoteControls } from "@/components/tip-vote-controls";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { getAgentTips, getQuestions } from "@/lib/data";
+
+export const metadata: Metadata = {
+  title: "Frågor & svar om bostadsköp och försäljning",
+  description: "Ställ frågor om bostadsköp, försäljning, juridik och värdering. Få svar från verifierade fastighetsmäklare.",
+};
 
 export default async function QuestionsPage() {
   const user = await getCurrentUser();
@@ -15,6 +21,9 @@ export default async function QuestionsPage() {
         Alla frågor är SEO-indexerade och kan besvaras av verifierade mäklare. Konsumenter kan jämföra svar sida vid sida.
       </p>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {questions.length === 0 && (
+          <p className="col-span-2 text-sm text-[var(--muted)]">Inga frågor publicerade ännu. Bli den första att ställa en fråga!</p>
+        )}
         {questions.map((question) => (
           <QuestionCard key={question.id} question={question} />
         ))}
