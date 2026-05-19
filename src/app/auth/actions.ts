@@ -16,8 +16,7 @@ const blockedPersonalDomains = new Set([
 export async function loginAction(_: { error?: string } | undefined, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
-  const next = String(formData.get("next") ?? "/");
-  const portal = String(formData.get("portal") ?? "consumer");
+  const next = String(formData.get("next") ?? "/dashboard");
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -35,58 +34,14 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
         .eq("id", authData.user.id)
         .maybeSingle();
 
-      if (profile?.role === "agent") {
-        redirect("/dashboard/maklare/profil");
-      }
-      if (profile?.role === "consumer") {
-        redirect("/dashboard/konsument");
-      }
       if (profile?.role === "admin") {
         redirect("/admin");
       }
     }
-
-    if (portal === "agent") {
-      redirect("/dashboard/maklare/profil");
-    }
-    redirect("/dashboard/konsument");
+    redirect("/dashboard");
   }
 
   redirect(next);
-}
-
-export async function registerConsumerAction(_: { error?: string } | undefined, formData: FormData) {
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "").trim();
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        role: "consumer",
-        full_name: fullName,
-      },
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (data.user) {
-    await supabase.from("profiles").upsert({
-      id: data.user.id,
-      role: "consumer",
-      full_name: fullName,
-      email,
-      accepted_terms_at: new Date().toISOString(),
-    });
-  }
-
-  redirect("/dashboard/konsument");
 }
 
 export async function registerAgentAction(_: { error?: string } | undefined, formData: FormData) {
@@ -94,12 +49,11 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
   const firm = String(formData.get("firm") ?? "").trim();
-  const fmiNumber = String(formData.get("fmi_number") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
 
   const domain = email.split("@")[1] ?? "";
   if (!domain || blockedPersonalDomains.has(domain)) {
-    return { error: "Mäklare måste registrera sig med företagsmail." };
+    return { error: "Du måste registrera dig med din företagsmail (inte gmail/hotmail/outlook etc.)." };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -112,7 +66,6 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
         full_name: fullName,
         firm,
         city,
-        fmi_number: fmiNumber,
       },
     },
   });
@@ -131,14 +84,13 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
       email,
       firm,
       city,
-      fmi_number: fmiNumber,
       verification_status: "pending",
       profile_slug: slug,
       accepted_terms_at: new Date().toISOString(),
     });
   }
 
-  redirect("/dashboard/maklare/profil");
+  redirect("/onboarding");
 }
 
 export async function signOutAction() {

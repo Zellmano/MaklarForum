@@ -15,7 +15,7 @@ function normalizeRole(input: unknown): UserRole {
   if (input === "agent" || input === "admin" || input === "consumer") {
     return input;
   }
-  return "consumer";
+  return "agent";
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -86,7 +86,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       id: authData.user.id,
       email: authData.user.email ?? "",
       fullName: authData.user.email?.split("@")[0] ?? "Användare",
-      role: "consumer",
+      role: "agent",
     };
   }
 
@@ -98,12 +98,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   };
 }
 
-export async function requireUser(nextPath = "/") {
+export async function requireUser(nextPath = "/dashboard") {
   const user = await getCurrentUser();
   if (!user) {
-    const shouldUseAgentLogin = nextPath.startsWith("/dashboard/maklare") || nextPath.startsWith("/forum");
-    const loginPath = shouldUseAgentLogin ? "/login/maklare" : "/login";
-    redirect(`${loginPath}?next=${encodeURIComponent(nextPath)}`);
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
   }
   return user;
 }

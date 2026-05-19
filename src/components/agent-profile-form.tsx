@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateAgentProfileAction } from "@/app/dashboard/maklare/actions";
+import { updateAgentProfileAction } from "@/app/dashboard/actions";
 
 export function AgentProfileForm({
   defaults,

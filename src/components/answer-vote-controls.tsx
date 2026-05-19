@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { voteAnswerAction } from "@/app/fragor/actions";
+import { voteAnswerAction } from "@/app/dashboard/fragor/actions";
 
 export function AnswerVoteControls({
   answerId,

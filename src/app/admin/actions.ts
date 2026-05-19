@@ -91,7 +91,7 @@ export async function approveGroupAction(formData: FormData) {
     .eq("id", groupId);
 
   revalidatePath("/admin");
-  revalidatePath("/dashboard/maklare/grupper");
+  revalidatePath("/dashboard/grupper");
 }
 
 export async function rejectGroupAction(formData: FormData) {
@@ -110,7 +110,7 @@ export async function rejectGroupAction(formData: FormData) {
     .eq("id", groupId);
 
   revalidatePath("/admin");
-  revalidatePath("/dashboard/maklare/grupper");
+  revalidatePath("/dashboard/grupper");
 }
 
 export async function approveModerationItemAction(formData: FormData) {

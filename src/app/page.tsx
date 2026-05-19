@@ -1,95 +1,73 @@
 import Link from "next/link";
-import { AgentCard } from "@/components/agent-card";
-import { GuideCard } from "@/components/guide-card";
-import { QuestionCard } from "@/components/question-card";
-import { buyerGuides, sellerGuides } from "@/lib/mock-data";
-import { getAgents, getQuestions } from "@/lib/data";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export default async function Home() {
-  const [questions, agents] = await Promise.all([getQuestions(), getAgents()]);
+  const user = await getCurrentUser();
+  if (user) {
+    redirect("/dashboard");
+  }
 
   return (
     <div className="pb-8">
       <section className="rounded-3xl border border-[var(--line)] bg-[var(--paper)] p-8 shadow-sm">
-        <p className="pill pill-light">Lansering Sverige 2026</p>
+        <p className="pill pill-light">Beta 2026 • Endast för verifierade mäklare</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-tight sm:text-5xl">
-          Hjälp kunder att köpa och sälja bostad med riktiga svar från verifierade mäklare.
+          Sveriges B2B-community för fastighetsmäklare.
         </h1>
         <p className="mt-4 max-w-3xl text-[var(--muted)]">
-          Mäklarforum.se är en öppen Q&A-plattform för konsumenter och samtidigt ett internt forum där mäklare kan diskutera juridik,
-          teknik, budgivning och rekrytering.
+          MäklarForum är ett slutet community där du som mäklare kan diskutera juridik, budgivning, teknik och vardagsfrågor med kollegor i din kommun, region eller hela landet — utan brus från konsumenter.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/fragor" className="pill pill-dark">
-            Utforska frågor
+          <Link href="/register" className="pill pill-dark">
+            Skapa mäklarkonto
           </Link>
-          <Link href="/maklare" className="pill pill-light">
-            Se verifierade mäklare
+          <Link href="/login" className="pill pill-light">
+            Logga in
           </Link>
         </div>
+        <p className="mt-4 text-xs text-[var(--muted)]">
+          Du behöver företagsmail för att registrera dig. Profilen godkänns manuellt av admin innan du får tillgång.
+        </p>
       </section>
 
-      <section className="mt-10">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl">Senaste frågor</h2>
-          <Link href="/fragor" className="text-sm text-[var(--accent)]">
-            Visa alla
-          </Link>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {questions.length === 0 && (
-            <p className="col-span-2 text-sm text-[var(--muted)]">Inga frågor publicerade ännu.</p>
-          )}
-          {questions.slice(0, 4).map((question) => (
-            <QuestionCard key={question.id} question={question} />
-          ))}
-        </div>
+      <section className="mt-10 grid gap-4 md:grid-cols-3">
+        <article className="card">
+          <h3 className="text-lg font-semibold">Geografiska grupper</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Gå med i offentliga eller privata grupper för din kommun, region eller specialisering. Diskutera lokala marknadsläget och utbyt erfarenheter med kollegor du faktiskt möter.
+          </p>
+        </article>
+        <article className="card">
+          <h3 className="text-lg font-semibold">Frågor & röstning</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Ställ frågor till andra mäklare. Bra svar röstas upp av kollegor och lyfts fram i flödet.
+          </p>
+        </article>
+        <article className="card">
+          <h3 className="text-lg font-semibold">Direktmeddelanden</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Bygg nätverk över hela landet med direktmeddelanden mellan verifierade mäklare.
+          </p>
+        </article>
       </section>
 
-      <section className="mt-10">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl">Verifierade mäklare</h2>
-          <Link href="/maklare" className="text-sm text-[var(--accent)]">
-            Se alla profiler
-          </Link>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {agents.length === 0 && (
-            <p className="col-span-3 text-sm text-[var(--muted)]">Inga verifierade mäklare ännu.</p>
-          )}
-          {agents.slice(0, 3).map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-10 grid gap-4 md:grid-cols-2">
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl">För säljare</h2>
-            <Link href="/guider/saljare" className="text-sm text-[var(--accent)]">
-              Alla säljarguider
-            </Link>
-          </div>
-          <div className="grid gap-4">
-            {sellerGuides.slice(0, 3).map((article) => (
-              <GuideCard key={article.slug} article={article} />
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl">För köpare</h2>
-            <Link href="/guider/kopare" className="text-sm text-[var(--accent)]">
-              Alla köparguider
-            </Link>
-          </div>
-          <div className="grid gap-4">
-            {buyerGuides.slice(0, 3).map((article) => (
-              <GuideCard key={article.slug} article={article} />
-            ))}
-          </div>
-        </div>
+      <section className="mt-10 card">
+        <h2 className="text-2xl">Så funkar det</h2>
+        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
+          <li>
+            <strong>Registrera dig</strong> med ditt namn, företagsmail, mäklarfirma och stad.
+          </li>
+          <li>
+            <strong>Admin verifierar</strong> profilen manuellt (vanligtvis inom 24 timmar).
+          </li>
+          <li>
+            <strong>Välj grupper</strong> du vill vara med i baserat på din kommun och region.
+          </li>
+          <li>
+            <strong>Börja diskutera</strong> med andra verifierade mäklare i hela Sverige.
+          </li>
+        </ol>
       </section>
     </div>
   );

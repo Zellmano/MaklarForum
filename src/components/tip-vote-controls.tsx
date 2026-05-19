@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { voteTipAction } from "@/app/fragor/actions";
+import { voteTipAction } from "@/app/dashboard/fragor/actions";
 
 export function TipVoteControls({ tipId, myVote, upVotes, downVotes }: { tipId: string; myVote: -1 | 0 | 1; upVotes: number; downVotes: number }) {
   const [state, formAction, pending] = useActionState(voteTipAction, undefined);

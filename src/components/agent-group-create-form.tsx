@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createAgentGroupAction } from "@/app/dashboard/maklare/actions";
+import { createAgentGroupAction } from "@/app/dashboard/actions";
 
 export function AgentGroupCreateForm() {
   const [state, action, pending] = useActionState(createAgentGroupAction, undefined);

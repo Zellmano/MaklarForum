@@ -36,13 +36,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isProtectedRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
+  const isProtectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding");
 
   if (isProtectedRoute && !user) {
-    const isAgentRoute = pathname.startsWith("/dashboard/maklare") || pathname.startsWith("/admin");
-    const loginPath = isAgentRoute ? "/login/maklare" : "/login";
     const url = request.nextUrl.clone();
-    url.pathname = loginPath;
+    url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
@@ -51,5 +52,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/onboarding/:path*"],
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { askQuestionAction } from "@/app/fragor/actions";
+import { askQuestionAction } from "@/app/dashboard/fragor/actions";
 
 export function QuestionCreateForm() {
   const [state, action, pending] = useActionState(askQuestionAction, undefined);

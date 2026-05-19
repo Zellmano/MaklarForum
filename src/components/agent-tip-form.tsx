@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createAgentTipAction } from "@/app/fragor/actions";
+import { createAgentTipAction } from "@/app/dashboard/fragor/actions";
 
 export function AgentTipForm() {
   const [state, action, pending] = useActionState(createAgentTipAction, undefined);

@@ -1,4 +1,4 @@
-import { toggleWatchThreadAction } from "@/app/fragor/actions";
+import { toggleWatchThreadAction } from "@/app/dashboard/fragor/actions";
 
 export function WatchThreadButton({ questionId, slug, watching }: { questionId: string; slug: string; watching: boolean }) {
   const action = toggleWatchThreadAction.bind(null, questionId, slug, watching);
