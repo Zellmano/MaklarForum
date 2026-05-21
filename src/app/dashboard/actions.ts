@@ -149,6 +149,14 @@ export async function leaveAgentGroupAction(groupId: string) {
   const user = await requireRole("agent", "/dashboard/grupper");
   const supabase = await createSupabaseServerClient();
 
+  const { data: group } = await supabase
+    .from("agent_groups")
+    .select("is_default")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (group?.is_default) return;
+
   await supabase.from("agent_group_members").delete().eq("group_id", groupId).eq("agent_id", user.id);
 
   revalidatePath("/dashboard/grupper");

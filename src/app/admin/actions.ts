@@ -11,7 +11,21 @@ export async function approveAgentAction(formData: FormData) {
   const admin = createSupabaseAdminClient();
   await admin.from("profiles").update({ verification_status: "verified" }).eq("id", agentId);
 
+  const { data: defaultGroup } = await admin
+    .from("agent_groups")
+    .select("id")
+    .eq("is_default", true)
+    .maybeSingle();
+
+  if (defaultGroup) {
+    await admin.from("agent_group_members").upsert(
+      { group_id: defaultGroup.id, agent_id: agentId, role: "member" },
+      { onConflict: "group_id,agent_id" },
+    );
+  }
+
   revalidatePath("/admin");
+  revalidatePath("/dashboard/grupper");
 }
 
 export async function rejectAgentAction(formData: FormData) {

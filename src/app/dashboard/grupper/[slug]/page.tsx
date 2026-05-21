@@ -6,6 +6,8 @@ import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { joinAgentGroupAction, leaveAgentGroupAction } from "@/app/dashboard/actions";
 import { formatDate } from "@/lib/format";
 import GroupInviteForm from "@/components/group-invite-form";
+import PollCreateForm from "@/components/poll-create-form";
+import PollCard from "@/components/poll-card";
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -18,7 +20,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   const supabase = await createSupabaseServerClient();
   const { data: group } = await supabase
     .from("agent_groups")
-    .select("id, name, slug, description, municipality, region, status, is_private, created_at")
+    .select("id, name, slug, description, municipality, region, status, is_private, is_default, created_at")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -26,7 +28,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
     notFound();
   }
 
-  const [{ data: membership }, { data: members }, { data: questions }] = await Promise.all([
+  const [{ data: membership }, { data: members }, { data: questions }, { data: polls }] = await Promise.all([
     supabase
       .from("agent_group_members")
       .select("role")
@@ -44,9 +46,45 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       .eq("group_id", group.id)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("group_polls")
+      .select("id, title, description, options, created_by, created_at, profiles:created_by(full_name)")
+      .eq("group_id", group.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   const isMember = Boolean(membership);
+  const isDefault = group.is_default === true;
+
+  const pollIds = (polls ?? []).map((p) => p.id);
+  let allVotes: { poll_id: string; option_index: number; voter_id: string }[] = [];
+  if (pollIds.length > 0) {
+    const { data } = await supabase
+      .from("group_poll_votes")
+      .select("poll_id, option_index, voter_id")
+      .in("poll_id", pollIds);
+    allVotes = data ?? [];
+  }
+
+  const pollsWithVotes = (polls ?? []).map((p) => {
+    const options: string[] = typeof p.options === "string" ? JSON.parse(p.options) : (p.options as string[]);
+    const votes = allVotes.filter((v) => v.poll_id === p.id);
+    const voteCounts = options.map((_, i) => votes.filter((v) => v.option_index === i).length);
+    const myVoteRecord = votes.find((v) => v.voter_id === user.id);
+    const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+    return {
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      options,
+      voteCounts,
+      totalVotes: votes.length,
+      myVote: myVoteRecord ? myVoteRecord.option_index : null,
+      createdAt: p.created_at,
+      creatorName: (profile as { full_name: string } | null)?.full_name ?? "Okänd",
+    };
+  });
 
   return (
     <div>
@@ -66,9 +104,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           </div>
           <div>
             {isMember ? (
-              <form action={leaveAgentGroupAction.bind(null, group.id)}>
-                <button className="pill pill-light">Lämna grupp</button>
-              </form>
+              isDefault ? (
+                <span className="pill pill-light opacity-60">Standardgrupp</span>
+              ) : (
+                <form action={leaveAgentGroupAction.bind(null, group.id)}>
+                  <button className="pill pill-light">Lämna grupp</button>
+                </form>
+              )
             ) : (
               <form action={joinAgentGroupAction.bind(null, group.id)}>
                 <button className="pill pill-dark">{group.is_private ? "Begär medlemskap" : "Gå med"}</button>
@@ -102,6 +144,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
               <p className="font-medium">{q.title}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">{formatDate(q.created_at)}</p>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl">Omröstningar</h2>
+          {isMember && <PollCreateForm groupId={group.id} groupSlug={group.slug} />}
+        </div>
+        <div className="mt-4 space-y-3">
+          {pollsWithVotes.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">Inga omröstningar ännu. {isMember && "Skapa den första!"}</p>
+          ) : null}
+          {pollsWithVotes.map((poll) => (
+            <PollCard key={poll.id} poll={poll} groupSlug={group.slug} isMember={isMember} />
           ))}
         </div>
       </section>
