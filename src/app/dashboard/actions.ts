@@ -72,8 +72,6 @@ export async function createAgentGroupAction(_: { error?: string; success?: stri
   const description = String(formData.get("description") ?? "").trim().slice(0, 1000);
   const municipality = String(formData.get("municipality") ?? "").trim().slice(0, 80);
   const region = String(formData.get("region") ?? "").trim().slice(0, 80);
-  const isPrivate = formData.get("is_private") === "on" || formData.get("is_private") === "true";
-
   if (!name || !municipality || !region) {
     return { error: "Namn, kommun och region är obligatoriskt." };
   }
@@ -88,7 +86,7 @@ export async function createAgentGroupAction(_: { error?: string; success?: stri
       description: description || null,
       municipality,
       region,
-      is_private: isPrivate,
+      is_private: true,
       created_by: user.id,
       status: "pending",
     })

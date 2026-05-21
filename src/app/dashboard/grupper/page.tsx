@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { getAgentGroupsForUser } from "@/lib/data";
 import { AgentGroupCreateForm } from "@/components/agent-group-create-form";
-import { joinAgentGroupAction, leaveAgentGroupAction } from "@/app/dashboard/actions";
+import { joinAgentGroupAction } from "@/app/dashboard/actions";
 
 export default async function AgentGroupsPage() {
   const user = await requireRole("agent", "/dashboard/grupper");
@@ -14,7 +14,7 @@ export default async function AgentGroupsPage() {
     <div>
       <h1 className="text-4xl">Mäklargrupper</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Geografiska och nischade grupper. Offentliga grupper kan du gå med i direkt — för privata grupper skickar du in en ansökan.
+        Geografiska och nischade grupper. Skicka en ansökan för att gå med — gruppens admin godkänner nya medlemmar.
       </p>
 
       <section className="mt-6 card">
@@ -54,10 +54,10 @@ export default async function AgentGroupsPage() {
       <section className="mt-6 card">
         <h2 className="text-xl">Upptäck grupper</h2>
         <div className="mt-4 space-y-3">
-          {approved.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Inga godkända grupper ännu. Skapa den första!</p>
+          {approved.filter((g) => !g.isMember).length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">Du är redan med i alla tillgängliga grupper.</p>
           ) : null}
-          {approved.map((group) => (
+          {approved.filter((g) => !g.isMember).map((group) => (
             <article key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -74,15 +74,9 @@ export default async function AgentGroupsPage() {
                 <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
               </div>
               <div className="mt-3">
-                {group.isMember ? (
-                  <form action={leaveAgentGroupAction.bind(null, group.id)}>
-                    <button className="pill pill-light">Lämna grupp</button>
-                  </form>
-                ) : (
-                  <form action={joinAgentGroupAction.bind(null, group.id)}>
-                    <button className="pill pill-dark">Gå med</button>
-                  </form>
-                )}
+                <form action={joinAgentGroupAction.bind(null, group.id)}>
+                  <button className="pill pill-dark">Begär medlemskap</button>
+                </form>
               </div>
             </article>
           ))}

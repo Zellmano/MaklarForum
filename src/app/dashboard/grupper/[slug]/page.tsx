@@ -96,8 +96,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap gap-2">
-              {group.is_private ? <span className="pill pill-light">Privat</span> : <span className="pill pill-light">Offentlig</span>}
-              <span className="pill pill-light">{group.municipality || "-"} • {group.region || "-"}</span>
+              <span className="pill pill-light">{group.municipality || "-"} &bull; {group.region || "-"}</span>
+              {isDefault && <span className="pill pill-light">Alla mäklare</span>}
             </div>
             <h1 className="mt-3 text-3xl">{group.name}</h1>
             {group.description ? <p className="mt-2 text-[var(--muted)]">{group.description}</p> : null}
@@ -113,7 +113,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
               )
             ) : (
               <form action={joinAgentGroupAction.bind(null, group.id)}>
-                <button className="pill pill-dark">{group.is_private ? "Begär medlemskap" : "Gå med"}</button>
+                <button className="pill pill-dark">Begär medlemskap</button>
               </form>
             )}
           </div>
