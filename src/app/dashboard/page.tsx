@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { formatDate } from "@/lib/format";
 import { getAgentGroupsForUser, getMessageThreads, getWatchedThreads } from "@/lib/data";
 import Link from "next/link";
+import InviteColleagueForm from "@/components/invite-colleague-form";
 
 const verificationLabels: Record<string, string> = {
   pending: "Väntar på godkännande",
@@ -121,27 +122,39 @@ export default async function AgentDashboardPage() {
         </article>
       </section>
 
-      <section className="mt-6 card">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl">Senaste meddelanden</h2>
-          <Link href="/dashboard/messages" className="text-sm text-[var(--accent)]">Öppna inkorg</Link>
-        </div>
-        <div className="mt-4 space-y-3">
-          {messageThreads.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga meddelanden ännu.</p> : null}
-          {messageThreads.slice(0, 5).map((thread) => (
-            <Link
-              key={thread.otherUserId}
-              href={`/dashboard/messages/${thread.otherUserId}`}
-              className="block rounded-xl border border-[var(--line)] bg-white p-3"
-            >
-              <p className="font-medium">{thread.otherUserName}</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">{thread.lastMessage}</p>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                {formatDate(thread.lastMessageAt)} • Olästa: {thread.unreadCount}
-              </p>
-            </Link>
-          ))}
-        </div>
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        <article className="card">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl">Senaste meddelanden</h2>
+            <Link href="/dashboard/messages" className="text-sm text-[var(--accent)]">Öppna inkorg</Link>
+          </div>
+          <div className="mt-4 space-y-3">
+            {messageThreads.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga meddelanden ännu.</p> : null}
+            {messageThreads.slice(0, 5).map((thread) => (
+              <Link
+                key={thread.otherUserId}
+                href={`/dashboard/messages/${thread.otherUserId}`}
+                className="block rounded-xl border border-[var(--line)] bg-white p-3"
+              >
+                <p className="font-medium">{thread.otherUserName}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{thread.lastMessage}</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {formatDate(thread.lastMessageAt)} • Olästa: {thread.unreadCount}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </article>
+
+        <article className="card">
+          <h2 className="text-xl">Bjud in kollega</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Hjälp communityt växa — bjud in mäklarkollegor du vill ha med på MäklarForum.
+          </p>
+          <div className="mt-4">
+            <InviteColleagueForm appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"} />
+          </div>
+        </article>
       </section>
     </div>
   );
