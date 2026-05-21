@@ -16,18 +16,29 @@ import { formatDate } from "@/lib/format";
 export default async function AdminPage() {
   await requireRole("admin", "/admin");
 
-  const [metrics, pendingAgents, pendingGroups, pendingModeration] = await Promise.all([
-    getAdminMetrics(),
-    getPendingAgentVerifications(),
-    getPendingGroupApprovals(),
-    getPendingModerationItems(),
-  ]);
-  const supabase = await createSupabaseServerClient();
-  const { data: users } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, role, verification_status, subscription_status")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  let metrics = { totalUsers: 0, verifiedAgents: 0, payingAgents: 0, flaggedItems: 0 };
+  let pendingAgents: Awaited<ReturnType<typeof getPendingAgentVerifications>> = [];
+  let pendingGroups: Awaited<ReturnType<typeof getPendingGroupApprovals>> = [];
+  let pendingModeration: Awaited<ReturnType<typeof getPendingModerationItems>> = [];
+  let users: Array<{ id: string; full_name: string; email: string; role: string; verification_status: string; subscription_status: string }> = [];
+
+  try {
+    [metrics, pendingAgents, pendingGroups, pendingModeration] = await Promise.all([
+      getAdminMetrics(),
+      getPendingAgentVerifications(),
+      getPendingGroupApprovals(),
+      getPendingModerationItems(),
+    ]);
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, role, verification_status, subscription_status")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    users = data ?? [];
+  } catch (err) {
+    console.error("Admin data fetch error:", err);
+  }
 
   return (
     <div>
