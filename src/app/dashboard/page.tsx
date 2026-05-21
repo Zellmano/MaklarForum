@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { formatDate } from "@/lib/format";
@@ -12,7 +12,7 @@ const verificationLabels: Record<string, string> = {
 };
 
 export default async function AgentDashboardPage() {
-  const user = await requireRole("agent", "/dashboard");
+  const user = await requireUser("/dashboard");
 
   let answerCount = 0;
   let questionCount = 0;
