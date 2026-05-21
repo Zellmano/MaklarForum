@@ -108,6 +108,7 @@ export async function requireUser(nextPath = "/dashboard") {
 
 export async function requireRole(role: UserRole, nextPath = "/") {
   const user = await requireUser(nextPath);
+  if (user.role === "admin") return user;
   if (user.role !== role) {
     redirect("/");
   }

@@ -3,12 +3,16 @@
 import { useActionState } from "react";
 import { askQuestionAction } from "@/app/dashboard/fragor/actions";
 
-export function QuestionCreateForm() {
+export function QuestionCreateForm({ groupId, groupName }: { groupId?: string; groupName?: string }) {
   const [state, action, pending] = useActionState(askQuestionAction, undefined);
 
   return (
     <form action={action} className="card mt-6 space-y-3">
       <h2 className="text-xl">Ställ ny fråga</h2>
+      {groupId && <input type="hidden" name="group_id" value={groupId} />}
+      {groupName && (
+        <p className="text-sm text-[var(--muted)]">Frågan kopplas till gruppen <strong>{groupName}</strong>.</p>
+      )}
       <label className="block text-sm">
         Rubrik
         <input name="title" required maxLength={200} className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white p-2" />

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { joinAgentGroupAction, leaveAgentGroupAction } from "@/app/dashboard/actions";
 import { formatDate } from "@/lib/format";
+import GroupInviteForm from "@/components/group-invite-form";
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -78,13 +79,23 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       </section>
 
       <section className="mt-6 card">
-        <h2 className="text-xl">Diskussioner i gruppen</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Visa diskussioner som är knutna till gruppen. Skapa en ny via &quot;Ställ en fråga&quot;.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl">Diskussioner i gruppen</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Frågor och diskussioner kopplade till gruppen.</p>
+          </div>
+          {isMember && (
+            <Link
+              href={`/dashboard/fragor/ny?group_id=${group.id}`}
+              className="pill pill-dark"
+            >
+              Starta ny diskussion
+            </Link>
+          )}
+        </div>
         <div className="mt-4 space-y-3">
           {(!questions || questions.length === 0) ? (
-            <p className="text-sm text-[var(--muted)]">Inga diskussioner ännu.</p>
+            <p className="text-sm text-[var(--muted)]">Inga diskussioner ännu. {isMember && "Bli den första att starta en!"}</p>
           ) : null}
           {(questions ?? []).map((q) => (
             <Link key={q.id} href={`/dashboard/fragor/${q.question_slug}`} className="block rounded-xl border border-[var(--line)] bg-white p-3">
@@ -95,25 +106,42 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         </div>
       </section>
 
-      <section className="mt-6 card">
-        <h2 className="text-xl">Medlemmar ({members?.length ?? 0})</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {(members ?? []).map((m) => {
-            const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-            if (!profile) return null;
-            return (
-              <Link
-                key={m.agent_id}
-                href={`/dashboard/medlemmar/${profile.profile_slug}`}
-                className="rounded-xl border border-[var(--line)] bg-white p-3 text-sm hover:border-[var(--accent)]"
-              >
-                <p className="font-medium">{profile.full_name}</p>
-                <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} • {profile.city || "-"}</p>
-                {m.role === "owner" ? <p className="mt-1 text-xs text-[var(--accent)]">Ägare</p> : null}
-              </Link>
-            );
-          })}
-        </div>
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        <article className="card">
+          <h2 className="text-xl">Medlemmar ({members?.length ?? 0})</h2>
+          <div className="mt-4 grid gap-3">
+            {(members ?? []).map((m) => {
+              const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+              if (!profile) return null;
+              return (
+                <Link
+                  key={m.agent_id}
+                  href={`/dashboard/medlemmar/${profile.profile_slug}`}
+                  className="rounded-xl border border-[var(--line)] bg-white p-3 text-sm hover:border-[var(--accent)]"
+                >
+                  <p className="font-medium">{profile.full_name}</p>
+                  <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} • {profile.city || "-"}</p>
+                  {m.role === "owner" ? <p className="mt-1 text-xs text-[var(--accent)]">Ägare</p> : null}
+                </Link>
+              );
+            })}
+          </div>
+        </article>
+
+        {isMember && (
+          <article className="card">
+            <h2 className="text-xl">Bjud in till gruppen</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Bjud in mäklarkollegor att gå med i {group.name}. Max 3 inbjudningar per dag.
+            </p>
+            <div className="mt-4">
+              <GroupInviteForm
+                groupName={group.name}
+                appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
+              />
+            </div>
+          </article>
+        )}
       </section>
     </div>
   );
