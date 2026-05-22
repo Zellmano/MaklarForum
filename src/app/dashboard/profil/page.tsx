@@ -2,42 +2,72 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AgentProfileForm } from "@/components/agent-profile-form";
+import AvatarUpload from "@/components/avatar-upload";
 import { formatDate } from "@/lib/format";
 import {
-  getAgentDashboardQuestionFeed,
   getAgentGroupsForUser,
-  getAgentLeadMetrics,
-  getAgentProfile,
   getAnswersByAgent,
   getMessageThreads,
 } from "@/lib/data";
+import { acceptConnectionAction, removeConnectionAction } from "@/app/dashboard/profile-actions";
 
 export default async function AgentProfileDashboardPage() {
   const user = await requireRole("agent", "/dashboard/profil");
   const supabase = await createSupabaseServerClient();
 
-  const [profile, answers, threads, groups, questionFeed, leads, areaRows, listingsCount] = await Promise.all([
-    getAgentProfile(user.id),
+  const [answers, threads, groups, areaRows, profileRow] = await Promise.all([
     getAnswersByAgent(user.id),
     getMessageThreads(user.id),
     getAgentGroupsForUser(user.id),
-    getAgentDashboardQuestionFeed(user.id),
-    getAgentLeadMetrics(user.id),
     supabase.from("agent_areas").select("municipality, region").eq("agent_id", user.id),
-    supabase.from("agent_listings").select("id", { count: "exact", head: true }).eq("agent_id", user.id).eq("status", "active"),
+    supabase.from("profiles").select("full_name, firm, title, city, bio, avatar_url, profile_slug").eq("id", user.id).single(),
   ]);
 
+  const profile = profileRow.data;
   const myGroups = groups.filter((group) => group.isMember);
   const suggestedGroups = groups.filter((group) => !group.isMember && group.status === "approved").slice(0, 6);
+
+  const { data: connections } = await supabase
+    .from("agent_connections")
+    .select("id, requester_id, receiver_id, status, created_at, accepted_at")
+    .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`);
+
+  const friendIds = (connections ?? [])
+    .filter((c) => c.status === "accepted")
+    .map((c) => (c.requester_id === user.id ? c.receiver_id : c.requester_id));
+
+  const pendingReceived = (connections ?? []).filter(
+    (c) => c.status === "pending" && c.receiver_id === user.id,
+  );
+
+  let friends: { id: string; full_name: string; firm: string | null; city: string | null; avatar_url: string | null; profile_slug: string | null }[] = [];
+  let pendingProfiles: typeof friends = [];
+
+  if (friendIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, firm, city, avatar_url, profile_slug")
+      .in("id", friendIds);
+    friends = data ?? [];
+  }
+
+  if (pendingReceived.length > 0) {
+    const pendingIds = pendingReceived.map((c) => c.requester_id);
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, firm, city, avatar_url, profile_slug")
+      .in("id", pendingIds);
+    pendingProfiles = data ?? [];
+  }
 
   return (
     <div>
       <h1 className="text-4xl">Min mäklarprofil</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Här hanterar du all information som kunder ser om dig samt dina meddelanden, grupper och aktiva trådar.
+        Hantera din profil, dina kontakter och se din aktivitet.
       </p>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
         <div className="metric">
           <p className="text-2xl font-semibold">{answers.length}</p>
           <p className="text-xs text-[var(--muted)]">Publicerade svar</p>
@@ -47,23 +77,8 @@ export default async function AgentProfileDashboardPage() {
           <p className="text-xs text-[var(--muted)]">Olästa meddelanden</p>
         </div>
         <div className="metric">
-          <p className="text-2xl font-semibold">{myGroups.length}</p>
-          <p className="text-xs text-[var(--muted)]">Mina grupper</p>
-        </div>
-        <div className="metric">
-          <p className="text-2xl font-semibold">{listingsCount.count ?? 0}</p>
-          <p className="text-xs text-[var(--muted)]">Aktiva objekt</p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="metric">
-          <p className="text-2xl font-semibold">{leads.sentTotal}</p>
-          <p className="text-xs text-[var(--muted)]">Automatiska tips/leads totalt</p>
-        </div>
-        <div className="metric">
-          <p className="text-2xl font-semibold">{leads.sentLast30Days}</p>
-          <p className="text-xs text-[var(--muted)]">Automatiska tips/leads senaste 30 dagar</p>
+          <p className="text-2xl font-semibold">{friends.length}</p>
+          <p className="text-xs text-[var(--muted)]">Kontakter</p>
         </div>
       </div>
 
@@ -72,25 +87,29 @@ export default async function AgentProfileDashboardPage() {
           <div>
             <h2 className="text-xl">Profilinformation</h2>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Allt här syns på din publika profilsida för kunder.
+              Synlig för andra mäklare på plattformen.
             </p>
           </div>
-          {profile?.slug ? (
-            <Link href={`/maklare/${profile.slug}`} className="pill pill-light">
-              Förhandsvisa kundprofil
+          {profile?.profile_slug ? (
+            <Link href={`/dashboard/medlemmar/${profile.profile_slug}`} className="pill pill-light">
+              Visa profil
             </Link>
           ) : null}
+        </div>
+
+        <div className="mt-4">
+          <AvatarUpload currentUrl={profile?.avatar_url} />
         </div>
 
         {profile ? (
           <div className="mt-4">
             <AgentProfileForm
               defaults={{
-                fullName: profile.fullName,
-                firm: profile.firm,
-                title: profile.title,
-                city: profile.city,
-                bio: profile.bio,
+                fullName: profile.full_name,
+                firm: profile.firm ?? "",
+                title: profile.title ?? "",
+                city: profile.city ?? "",
+                bio: profile.bio ?? "",
               }}
             />
           </div>
@@ -107,6 +126,74 @@ export default async function AgentProfileDashboardPage() {
           ) : (
             <p className="mt-1">Inga områden sparade ännu.</p>
           )}
+        </div>
+      </section>
+
+      <section className="mt-6 card">
+        <h2 className="text-xl">Mina kontakter ({friends.length})</h2>
+
+        {pendingReceived.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-[var(--accent)]">Väntande förfrågningar</h3>
+            <div className="mt-2 space-y-2">
+              {pendingReceived.map((conn) => {
+                const p = pendingProfiles.find((pr) => pr.id === conn.requester_id);
+                if (!p) return null;
+                return (
+                  <div key={conn.id} className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-100">
+                        {p.avatar_url ? (
+                          <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-sm text-[var(--muted)]">{p.full_name[0]}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{p.full_name}</p>
+                        <p className="text-xs text-[var(--muted)]">{p.firm ?? "-"} &bull; {p.city ?? "-"}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <form action={acceptConnectionAction.bind(null, conn.id)}>
+                        <button className="pill pill-dark text-xs">Acceptera</button>
+                      </form>
+                      <form action={removeConnectionAction.bind(null, conn.id)}>
+                        <button className="pill pill-light text-xs">Avböj</button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {friends.length === 0 && pendingReceived.length === 0 && (
+            <p className="text-sm text-[var(--muted)] md:col-span-2">
+              Inga kontakter ännu. Besök en mäklares profil för att skicka en kontaktförfrågan.
+            </p>
+          )}
+          {friends.map((f) => (
+            <Link
+              key={f.id}
+              href={`/dashboard/medlemmar/${f.profile_slug}`}
+              className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3 hover:border-[var(--accent)]"
+            >
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-100">
+                {f.avatar_url ? (
+                  <img src={f.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-sm text-[var(--muted)]">{f.full_name[0]}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{f.full_name}</p>
+                <p className="text-xs text-[var(--muted)]">{f.firm ?? "-"} &bull; {f.city ?? "-"}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -127,7 +214,7 @@ export default async function AgentProfileDashboardPage() {
               >
                 <p className="font-medium">{thread.otherUserName}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">{thread.lastMessage}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">{formatDate(thread.lastMessageAt)} • Olästa: {thread.unreadCount}</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">{formatDate(thread.lastMessageAt)} &bull; Olästa: {thread.unreadCount}</p>
               </Link>
             ))}
             {threads.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga meddelanden ännu.</p> : null}
@@ -141,46 +228,22 @@ export default async function AgentProfileDashboardPage() {
               Hantera grupper
             </Link>
           </div>
-          <p className="mt-2 text-sm text-[var(--muted)]">Förslag baserat på din ort och dina nuvarande medlemskap.</p>
           <div className="mt-4 space-y-3">
             {myGroups.slice(0, 3).map((group) => (
-              <div key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+              <Link key={group.id} href={`/dashboard/grupper/${group.slug}`} className="block rounded-xl border border-[var(--line)] bg-white p-3">
                 <p className="font-medium">{group.name}</p>
-                <p className="text-xs text-[var(--muted)]">Medlem • {group.memberCount} medlemmar</p>
-              </div>
+                <p className="text-xs text-[var(--muted)]">Medlem &bull; {group.memberCount} medlemmar</p>
+              </Link>
             ))}
             {suggestedGroups.slice(0, 3).map((group) => (
-              <div key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+              <Link key={group.id} href={`/dashboard/grupper/${group.slug}`} className="block rounded-xl border border-[var(--line)] bg-white p-3">
                 <p className="font-medium">{group.name}</p>
-                <p className="text-xs text-[var(--muted)]">Förslag • {group.memberCount} medlemmar</p>
-              </div>
+                <p className="text-xs text-[var(--muted)]">Förslag &bull; {group.memberCount} medlemmar</p>
+              </Link>
             ))}
             {groups.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga grupper ännu.</p> : null}
           </div>
         </article>
-      </section>
-
-      <section className="mt-6 card">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl">Frågor att svara på</h2>
-          <Link href="/dashboard/fragor" className="text-sm text-[var(--accent)]">
-            Se alla frågor
-          </Link>
-        </div>
-        <div className="mt-4 space-y-3">
-          {questionFeed.slice(0, 8).map((question) => (
-            <Link key={question.id} href={`/fragor/${question.slug}`} className="block rounded-xl border border-[var(--line)] bg-white p-3">
-              <p className="font-medium">{question.title}</p>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                {question.category} • {question.geoScope}
-                {question.municipality ? ` • ${question.municipality}` : ""}
-                {question.region ? `, ${question.region}` : ""}
-              </p>
-              <p className="mt-1 text-xs text-[var(--muted)]">{question.answeredByMe ? "Du har svarat" : "Ej besvarad av dig"}</p>
-            </Link>
-          ))}
-          {questionFeed.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga frågor hittades ännu.</p> : null}
-        </div>
       </section>
     </div>
   );
