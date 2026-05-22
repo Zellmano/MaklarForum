@@ -31,6 +31,18 @@ export default async function AgentDashboardPage() {
     verification = profile?.verification_status ?? "pending";
   }
 
+  let invitations: { id: string; email: string; status: string; created_at: string }[] = [];
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from("invitations")
+      .select("id, email, status, created_at")
+      .eq("inviter_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    invitations = data ?? [];
+  }
+
   const [watchedThreads, messageThreads, groups] = await Promise.all([
     getWatchedThreads(user.id),
     getMessageThreads(user.id),
@@ -149,11 +161,32 @@ export default async function AgentDashboardPage() {
         <article className="card">
           <h2 className="text-xl">Bjud in kollega</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Hjälp communityt växa — bjud in mäklarkollegor du vill ha med på MäklarForum.
+            Hjälp communityt växa — bjud in mäklarkollegor du vill ha med på MäklarForum. Max 3 per dag.
           </p>
           <div className="mt-4">
-            <InviteColleagueForm appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"} />
+            <InviteColleagueForm />
           </div>
+          {invitations.length > 0 && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
+              <h3 className="text-sm font-medium">Dina inbjudningar</h3>
+              <div className="mt-2 space-y-2">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-white p-2 text-sm">
+                    <span className="truncate">{inv.email}</span>
+                    <span className={`ml-2 shrink-0 text-xs ${
+                      inv.status === "registered" ? "text-emerald-600" :
+                      inv.status === "clicked" ? "text-blue-600" :
+                      "text-[var(--muted)]"
+                    }`}>
+                      {inv.status === "registered" ? "Registrerad!" :
+                       inv.status === "clicked" ? "Klickad" :
+                       "Väntande"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </article>
       </section>
     </div>

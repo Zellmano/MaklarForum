@@ -50,6 +50,7 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
   const password = String(formData.get("password") ?? "").trim();
   const firm = String(formData.get("firm") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
+  const inviteToken = String(formData.get("invite_token") ?? "").trim();
 
   const domain = email.split("@")[1] ?? "";
   if (!domain || blockedPersonalDomains.has(domain)) {
@@ -88,6 +89,18 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
       profile_slug: slug,
       accepted_terms_at: new Date().toISOString(),
     });
+
+    if (inviteToken) {
+      await supabase
+        .from("invitations")
+        .update({
+          status: "registered",
+          registered_user_id: data.user.id,
+          registered_at: new Date().toISOString(),
+        })
+        .eq("token", inviteToken)
+        .eq("status", "pending");
+    }
   }
 
   redirect("/onboarding");

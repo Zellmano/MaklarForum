@@ -3,11 +3,12 @@
 import { useActionState } from "react";
 import { registerAgentAction } from "@/app/auth/actions";
 
-export function RegisterAgentForm() {
+export function RegisterAgentForm({ inviteToken }: { inviteToken?: string }) {
   const [state, action, pending] = useActionState(registerAgentAction, undefined);
 
   return (
     <form action={action} className="mt-4 grid gap-3">
+      {inviteToken && <input type="hidden" name="invite_token" value={inviteToken} />}
       <label className="block text-sm">
         Fullständigt namn
         <input name="full_name" required maxLength={120} className="mt-1 w-full rounded-xl border border-[var(--line)] bg-white p-2" />

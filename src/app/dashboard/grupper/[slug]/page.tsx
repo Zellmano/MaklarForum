@@ -194,7 +194,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             <div className="mt-4">
               <GroupInviteForm
                 groupName={group.name}
-                appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}
+                groupId={group.id}
               />
             </div>
           </article>
