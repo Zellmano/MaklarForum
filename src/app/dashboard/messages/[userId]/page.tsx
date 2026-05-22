@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { getConversation, getMessageThreads, markConversationAsRead } from "@/lib/data";
+import { getConversation, markConversationAsRead } from "@/lib/data";
 import { sendConversationMessageAction } from "@/app/dashboard/messages/actions";
 import { ConversationComposer } from "@/components/messages/conversation-composer";
+import { UserAvatar } from "@/components/user-avatar";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export default async function AgentConversationPage({
   params,
@@ -12,15 +14,26 @@ export default async function AgentConversationPage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
-  const user = await requireRole("agent", `/dashboard/messages/${userId}`);
+  const user = await requireUser(`/dashboard/messages/${userId}`);
 
-  const [threads, conversation] = await Promise.all([getMessageThreads(user.id), getConversation(user.id, userId)]);
+  let otherName = "Mäklare";
+  let otherAvatarUrl: string | null = null;
 
-  const thread = threads.find((item) => item.otherUserId === userId);
-  if (!thread) {
-    notFound();
+  if (hasSupabaseEnv()) {
+    const supabase = await createSupabaseServerClient();
+    const { data: otherProfile } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url, firm, city")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (otherProfile) {
+      otherName = otherProfile.full_name;
+      otherAvatarUrl = otherProfile.avatar_url;
+    }
   }
 
+  const conversation = await getConversation(user.id, userId);
   await markConversationAsRead(user.id, userId);
 
   const sendAction = sendConversationMessageAction.bind(null, userId);
@@ -30,10 +43,15 @@ export default async function AgentConversationPage({
       <Link href="/dashboard/messages" className="text-sm text-[var(--accent)]">
         ← Till inkorg
       </Link>
-      <h1 className="mt-2 text-3xl">{thread.otherUserName}</h1>
-      <p className="text-sm text-[var(--muted)]">Roll: {thread.otherUserRole}</p>
+      <div className="mt-2 flex items-center gap-3">
+        <UserAvatar url={otherAvatarUrl} name={otherName} size="lg" />
+        <h1 className="text-3xl">{otherName}</h1>
+      </div>
 
       <section className="mt-4 card">
+        {conversation.length === 0 && (
+          <p className="text-sm text-[var(--muted)]">Inga meddelanden ännu. Skriv det första!</p>
+        )}
         <div className="space-y-3">
           {conversation.map((message) => {
             const mine = message.senderId === user.id;

@@ -171,17 +171,27 @@ export default async function AgentProfileDashboardPage() {
             </p>
           )}
           {friends.map((f) => (
-            <Link
+            <div
               key={f.id}
-              href={`/dashboard/medlemmar/${f.profile_slug}`}
-              className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3 hover:border-[var(--accent)]"
+              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-white p-3"
             >
-              <UserAvatar url={f.avatar_url} name={f.full_name} />
-              <div>
-                <p className="text-sm font-medium">{f.full_name}</p>
-                <p className="text-xs text-[var(--muted)]">{f.firm ?? "-"} &bull; {f.city ?? "-"}</p>
-              </div>
-            </Link>
+              <Link href={`/dashboard/medlemmar/${f.profile_slug}`} className="flex items-center gap-3 hover:opacity-80">
+                <UserAvatar url={f.avatar_url} name={f.full_name} />
+                <div>
+                  <p className="text-sm font-medium">{f.full_name}</p>
+                  <p className="text-xs text-[var(--muted)]">{f.firm ?? "-"} &bull; {f.city ?? "-"}</p>
+                </div>
+              </Link>
+              <Link
+                href={`/dashboard/messages/${f.id}`}
+                className="shrink-0 rounded-full border border-[var(--line)] p-2 hover:border-[var(--accent)] hover:bg-blue-50"
+                title="Skicka meddelande"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </Link>
+            </div>
           ))}
         </div>
       </section>
