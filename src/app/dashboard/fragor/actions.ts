@@ -68,6 +68,11 @@ export async function submitAnswerAction(
     return { error: error.message };
   }
 
+  await supabase.from("question_watchers").upsert(
+    { question_id: questionId, user_id: user.id },
+    { onConflict: "question_id,user_id" },
+  );
+
   revalidatePath(`/dashboard/fragor/${slug}`);
   return { success: "Svar publicerat." };
 }
@@ -91,15 +96,14 @@ export async function askQuestionAction(_: ActionState | undefined, formData: Fo
     return { error: "Din mäklarprofil måste vara verifierad för att ställa frågor." };
   }
 
-  const slug = toSlug(title);
-
+  const questionSlug = `${toSlug(title)}-${Date.now().toString().slice(-6)}`;
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data: inserted, error } = await supabase
     .from("questions")
     .insert({
       asked_by: user.id,
       title,
-      question_slug: `${slug}-${Date.now().toString().slice(-6)}`,
+      question_slug: questionSlug,
       body,
       audience: "general",
       category,
@@ -107,10 +111,19 @@ export async function askQuestionAction(_: ActionState | undefined, formData: Fo
       municipality: municipality || null,
       region: region || null,
       group_id: groupId,
-    });
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (inserted) {
+    await supabase.from("question_watchers").upsert(
+      { question_id: inserted.id, user_id: user.id },
+      { onConflict: "question_id,user_id" },
+    );
   }
 
   revalidatePath("/dashboard/fragor");
