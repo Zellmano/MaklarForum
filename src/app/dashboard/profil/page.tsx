@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AgentProfileForm } from "@/components/agent-profile-form";
 import AvatarUpload from "@/components/avatar-upload";
+import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/format";
 import {
   getAgentGroupsForUser,
@@ -142,13 +143,7 @@ export default async function AgentProfileDashboardPage() {
                 return (
                   <div key={conn.id} className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-white p-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-100">
-                        {p.avatar_url ? (
-                          <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-sm text-[var(--muted)]">{p.full_name[0]}</span>
-                        )}
-                      </div>
+                      <UserAvatar url={p.avatar_url} name={p.full_name} />
                       <div>
                         <p className="text-sm font-medium">{p.full_name}</p>
                         <p className="text-xs text-[var(--muted)]">{p.firm ?? "-"} &bull; {p.city ?? "-"}</p>
@@ -181,13 +176,7 @@ export default async function AgentProfileDashboardPage() {
               href={`/dashboard/medlemmar/${f.profile_slug}`}
               className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3 hover:border-[var(--accent)]"
             >
-              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-100">
-                {f.avatar_url ? (
-                  <img src={f.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-sm text-[var(--muted)]">{f.full_name[0]}</span>
-                )}
-              </div>
+              <UserAvatar url={f.avatar_url} name={f.full_name} />
               <div>
                 <p className="text-sm font-medium">{f.full_name}</p>
                 <p className="text-xs text-[var(--muted)]">{f.firm ?? "-"} &bull; {f.city ?? "-"}</p>

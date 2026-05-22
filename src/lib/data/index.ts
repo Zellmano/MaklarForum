@@ -113,7 +113,7 @@ export async function getAnswersForQuestion(questionId: string, viewerId?: strin
   const [{ data: agentProfiles }, { data: voteRows }, { data: myVotes }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status")
+      .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url")
       .in("id", agentIds),
     supabase.from("answer_votes").select("answer_id, vote").in("answer_id", answerIds),
     viewerId
@@ -165,6 +165,7 @@ export async function getAnswersForQuestion(questionId: string, viewerId?: strin
             soldCount: 0,
             activeCount: 0,
             profileViews: 0,
+            avatarUrl: agent.avatar_url,
           }
         : null,
     };
@@ -183,7 +184,7 @@ export async function getAgents() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status")
+    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url")
     .eq("role", "agent")
     .eq("verification_status", "verified")
     .order("created_at", { ascending: false })
@@ -208,6 +209,7 @@ export async function getAgents() {
     soldCount: 0,
     activeCount: 0,
     profileViews: 0,
+    avatarUrl: row.avatar_url,
   }));
 }
 
@@ -219,7 +221,7 @@ export async function getAgentBySlug(slug: string) {
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("profiles")
-    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status")
+    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url")
     .eq("role", "agent")
     .eq("profile_slug", slug)
     .maybeSingle();
@@ -243,6 +245,7 @@ export async function getAgentBySlug(slug: string) {
     soldCount: 0,
     activeCount: 0,
     profileViews: 0,
+    avatarUrl: row.avatar_url,
   };
 }
 

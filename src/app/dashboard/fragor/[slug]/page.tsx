@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AnswerComposer } from "@/components/answer-composer";
 import { WatchThreadButton } from "@/components/watch-thread-button";
 import { AnswerVoteControls } from "@/components/answer-vote-controls";
+import { UserAvatar } from "@/components/user-avatar";
 import { formatDate } from "@/lib/format";
 import { getAnswersForQuestion, getQuestionBySlug } from "@/lib/data";
 import { submitAnswerAction } from "@/app/dashboard/fragor/actions";
@@ -96,9 +97,12 @@ export default async function QuestionDetail({ params }: { params: Promise<{ slu
           {topAnswers.map((answer) => (
             <article key={answer.id} className="card">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{answer.agent?.fullName ?? "Mäklare"}</p>
-                  <p className="text-xs text-[var(--muted)]">{answer.agent?.firm ?? "-"} &bull; {answer.agent?.city ?? "-"}</p>
+                <div className="flex items-center gap-3">
+                  <UserAvatar url={answer.agent?.avatarUrl} name={answer.agent?.fullName ?? "?"} size="sm" />
+                  <div>
+                    <p className="font-semibold">{answer.agent?.fullName ?? "Mäklare"}</p>
+                    <p className="text-xs text-[var(--muted)]">{answer.agent?.firm ?? "-"} &bull; {answer.agent?.city ?? "-"}</p>
+                  </div>
                 </div>
                 <span className="shrink-0 text-xs text-[var(--muted)]">{formatDate(answer.createdAt)}</span>
               </div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
+import { UserAvatar } from "@/components/user-avatar";
 import { joinAgentGroupAction, leaveAgentGroupAction } from "@/app/dashboard/actions";
 import { formatDate } from "@/lib/format";
 import GroupInviteForm from "@/components/group-invite-form";
@@ -37,7 +38,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       .maybeSingle(),
     supabase
       .from("agent_group_members")
-      .select("agent_id, role, profiles:agent_id(id, full_name, profile_slug, firm, city)")
+      .select("agent_id, role, profiles:agent_id(id, full_name, profile_slug, firm, city, avatar_url)")
       .eq("group_id", group.id)
       .limit(50),
     supabase
@@ -174,11 +175,14 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
                 <Link
                   key={m.agent_id}
                   href={`/dashboard/medlemmar/${profile.profile_slug}`}
-                  className="rounded-xl border border-[var(--line)] bg-white p-3 text-sm hover:border-[var(--accent)]"
+                  className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3 text-sm hover:border-[var(--accent)]"
                 >
-                  <p className="font-medium">{profile.full_name}</p>
-                  <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} • {profile.city || "-"}</p>
-                  {m.role === "owner" ? <p className="mt-1 text-xs text-[var(--accent)]">Ägare</p> : null}
+                  <UserAvatar url={(profile as { avatar_url?: string }).avatar_url} name={profile.full_name} size="sm" />
+                  <div>
+                    <p className="font-medium">{profile.full_name}</p>
+                    <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} &bull; {profile.city || "-"}</p>
+                    {m.role === "owner" ? <p className="text-xs text-[var(--accent)]">Ägare</p> : null}
+                  </div>
                 </Link>
               );
             })}

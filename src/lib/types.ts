@@ -21,6 +21,7 @@ export interface AgentProfile {
   soldCount: number;
   activeCount: number;
   profileViews: number;
+  avatarUrl?: string | null;
 }
 
 export interface Question {
