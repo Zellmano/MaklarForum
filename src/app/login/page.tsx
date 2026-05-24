@@ -18,6 +18,11 @@ export default async function LoginPage({
         <LoginForm next={next ?? "/dashboard"} portal="agent" />
         <div className="mt-4 text-sm text-[var(--muted)]">
           <p>
+            <Link href="/forgot-password" className="text-[var(--accent)]">
+              Glömt lösenord?
+            </Link>
+          </p>
+          <p className="mt-2">
             Inget konto än?{" "}
             <Link href="/register" className="text-[var(--accent)]">
               Skapa mäklarkonto

@@ -133,3 +133,62 @@ export async function signOutAction() {
   await supabase.auth.signOut();
   redirect("/");
 }
+
+export async function requestPasswordResetAction(
+  _: { error?: string; success?: string } | undefined,
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  if (!email || !email.includes("@")) {
+    return { error: "Ange en giltig e-postadress." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {
+    success:
+      "Om kontot finns har vi skickat en länk till din e-post. Klicka på länken för att välja nytt lösenord.",
+  };
+}
+
+export async function updatePasswordAction(
+  _: { error?: string; success?: string } | undefined,
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 8) {
+    return { error: "Lösenordet måste vara minst 8 tecken." };
+  }
+  if (password !== confirm) {
+    return { error: "Lösenorden matchar inte." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Din återställningslänk har gått ut. Begär en ny." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  redirect("/dashboard");
+}
