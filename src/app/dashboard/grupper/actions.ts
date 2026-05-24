@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ActionState = { error?: string; success?: string };
@@ -15,7 +15,7 @@ export async function createPollAction(
   _: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  const user = await requireRole("agent", `/dashboard/grupper/${groupSlug}`);
+  const user = await requireVerifiedAgent(`/dashboard/grupper/${groupSlug}`);
   const supabase = await createSupabaseServerClient();
 
   const { data: profile } = await supabase
@@ -71,7 +71,7 @@ export async function votePollAction(
   groupSlug: string,
   optionIndex: number,
 ) {
-  const user = await requireRole("agent", `/dashboard/grupper/${groupSlug}`);
+  const user = await requireVerifiedAgent(`/dashboard/grupper/${groupSlug}`);
   const supabase = await createSupabaseServerClient();
 
   const { data: existing } = await supabase

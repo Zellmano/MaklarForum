@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { getAgentGroupsForUser } from "@/lib/data";
 import { AgentGroupCreateForm } from "@/components/agent-group-create-form";
 import { joinAgentGroupAction } from "@/app/dashboard/actions";
 
 export default async function AgentGroupsPage() {
-  const user = await requireRole("agent", "/dashboard/grupper");
+  const user = await requireVerifiedAgent("/dashboard/grupper");
   const groups = await getAgentGroupsForUser(user.id);
   const approved = groups.filter((group) => group.status === "approved");
   const myGroups = groups.filter((group) => group.isMember);

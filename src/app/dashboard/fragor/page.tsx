@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { AgentTipForm } from "@/components/agent-tip-form";
 import { TipVoteControls } from "@/components/tip-vote-controls";
 import { getAgentDashboardQuestionFeed, getAgentTips, getAgentTipsByAuthor } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 
 export default async function AgentQuestionsPage() {
-  const user = await requireRole("agent", "/dashboard/fragor");
+  const user = await requireVerifiedAgent("/dashboard/fragor");
   const [questions, myTips, allTips] = await Promise.all([
     getAgentDashboardQuestionFeed(user.id),
     getAgentTipsByAuthor(user.id, user.id),

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { getAgents } from "@/lib/data";
 import { UserAvatar } from "@/components/user-avatar";
 
 export default async function MembersPage() {
-  const user = await requireRole("agent", "/dashboard/medlemmar");
+  const user = await requireVerifiedAgent("/dashboard/medlemmar");
   const agents = await getAgents();
 
   return (

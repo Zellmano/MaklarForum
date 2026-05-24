@@ -9,13 +9,14 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   fullName: string;
+  verificationStatus: "pending" | "verified" | "suspended" | null;
 }
 
-function normalizeRole(input: unknown): UserRole {
+function normalizeRole(input: unknown): UserRole | null {
   if (input === "agent" || input === "admin" || input === "consumer") {
     return input;
   }
-  return "agent";
+  return null;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -32,16 +33,21 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name, role, verification_status")
     .eq("id", authData.user.id)
     .maybeSingle();
 
   if (!profile) {
     const meta = authData.user.user_metadata ?? {};
+    const role = normalizeRole(meta.role);
+
+    if (!role) {
+      return null;
+    }
+
     const fullName = String(meta.full_name ?? authData.user.email?.split("@")[0] ?? "Användare").trim();
     const city = String(meta.city ?? "").trim();
     const firm = String(meta.firm ?? "").trim();
-    const role = normalizeRole(meta.role);
 
     const insertPayload: {
       id: string;
@@ -75,19 +81,14 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     await supabase.from("profiles").upsert(insertPayload);
     const retry = await supabase
       .from("profiles")
-      .select("id, email, full_name, role")
+      .select("id, email, full_name, role, verification_status")
       .eq("id", authData.user.id)
       .maybeSingle();
     profile = retry.data ?? null;
   }
 
   if (!profile) {
-    return {
-      id: authData.user.id,
-      email: authData.user.email ?? "",
-      fullName: authData.user.email?.split("@")[0] ?? "Användare",
-      role: "agent",
-    };
+    return null;
   }
 
   return {
@@ -95,6 +96,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     email: profile.email,
     fullName: profile.full_name,
     role: profile.role,
+    verificationStatus: profile.verification_status ?? null,
   };
 }
 
@@ -111,6 +113,18 @@ export async function requireRole(role: UserRole, nextPath = "/") {
   if (user.role === "admin") return user;
   if (user.role !== role) {
     redirect("/");
+  }
+  return user;
+}
+
+export async function requireVerifiedAgent(nextPath = "/dashboard") {
+  const user = await requireRole("agent", nextPath);
+  if (user.role === "admin") return user;
+  if (user.verificationStatus === "suspended") {
+    redirect("/dashboard/pending?status=suspended");
+  }
+  if (user.verificationStatus !== "verified") {
+    redirect("/dashboard/pending");
   }
   return user;
 }

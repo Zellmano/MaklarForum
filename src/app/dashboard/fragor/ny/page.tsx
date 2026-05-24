@@ -1,10 +1,10 @@
 import { QuestionCreateForm } from "@/components/question-create-form";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export default async function NewQuestionPage({ searchParams }: { searchParams: Promise<{ group_id?: string }> }) {
-  await requireRole("agent", "/dashboard/fragor/ny");
+  await requireVerifiedAgent("/dashboard/fragor/ny");
   const { group_id } = await searchParams;
 
   let groupName: string | undefined;

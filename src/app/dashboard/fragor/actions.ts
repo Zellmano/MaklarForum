@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, requireUser } from "@/lib/auth";
+import { requireUser, requireVerifiedAgent } from "@/lib/auth";
 import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canPublish } from "@/lib/moderation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const MAX_BODY_LENGTH = 10000;
 const MAX_TITLE_LENGTH = 200;
@@ -29,7 +30,7 @@ export async function submitAnswerAction(
   _: ActionState | undefined,
   formData: FormData,
 ) {
-  const user = await requireRole("agent", `/dashboard/fragor/${slug}`);
+  const user = await requireVerifiedAgent(`/dashboard/fragor/${slug}`);
   const supabase = await createSupabaseServerClient();
 
   const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
@@ -58,6 +59,11 @@ export async function submitAnswerAction(
     return { error: "Din mäklarprofil är inte verifierad ännu." };
   }
 
+  const rateLimit = await checkRateLimit("answers", user.id);
+  if (!rateLimit.ok) {
+    return { error: rateLimit.error };
+  }
+
   const { error } = await supabase.from("answers").insert({
     question_id: questionId,
     answered_by: user.id,
@@ -78,7 +84,7 @@ export async function submitAnswerAction(
 }
 
 export async function askQuestionAction(_: ActionState | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard/fragor");
+  const user = await requireVerifiedAgent("/dashboard/fragor");
 
   const title = String(formData.get("title") ?? "").trim().slice(0, MAX_TITLE_LENGTH);
   const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
@@ -94,6 +100,11 @@ export async function askQuestionAction(_: ActionState | undefined, formData: Fo
 
   if (!(await ensureVerifiedAgent(user.id))) {
     return { error: "Din mäklarprofil måste vara verifierad för att ställa frågor." };
+  }
+
+  const rateLimit = await checkRateLimit("questions", user.id);
+  if (!rateLimit.ok) {
+    return { error: rateLimit.error };
   }
 
   const questionSlug = `${toSlug(title)}-${Date.now().toString().slice(-6)}`;
@@ -148,7 +159,7 @@ export async function toggleWatchThreadAction(questionId: string, slug: string, 
 }
 
 export async function voteAnswerAction(_: ActionState | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard/fragor");
+  const user = await requireVerifiedAgent("/dashboard/fragor");
 
   const answerId = String(formData.get("answer_id") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
@@ -187,7 +198,7 @@ export async function voteAnswerAction(_: ActionState | undefined, formData: For
 }
 
 export async function createAgentTipAction(_: ActionState | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard/fragor");
+  const user = await requireVerifiedAgent("/dashboard/fragor");
 
   const title = String(formData.get("title") ?? "").trim().slice(0, MAX_TITLE_LENGTH);
   const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
@@ -206,6 +217,11 @@ export async function createAgentTipAction(_: ActionState | undefined, formData:
 
   if (!(await ensureVerifiedAgent(user.id))) {
     return { error: "Din mäklarprofil måste vara verifierad för att publicera tips." };
+  }
+
+  const rateLimit = await checkRateLimit("agent_tips", user.id);
+  if (!rateLimit.ok) {
+    return { error: rateLimit.error };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -228,7 +244,7 @@ export async function createAgentTipAction(_: ActionState | undefined, formData:
 }
 
 export async function voteTipAction(_: ActionState | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard/fragor");
+  const user = await requireVerifiedAgent("/dashboard/fragor");
   const tipId = String(formData.get("tip_id") ?? "").trim();
   const voteRaw = Number(formData.get("vote") ?? 0);
   const vote = voteRaw === -1 ? -1 : 1;

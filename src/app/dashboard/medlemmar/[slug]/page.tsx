@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { getAgentBySlug, getAnswersByAgent, getAgentTipsByAuthor } from "@/lib/data";
 
 export default async function MemberProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const me = await requireRole("agent", `/dashboard/medlemmar/${slug}`);
+  const me = await requireVerifiedAgent(`/dashboard/medlemmar/${slug}`);
   const agent = await getAgentBySlug(slug);
 
   if (!agent) {

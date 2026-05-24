@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireRole } from "@/lib/auth";
+import { requireVerifiedAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { UserAvatar } from "@/components/user-avatar";
@@ -12,7 +12,7 @@ import PollCard from "@/components/poll-card";
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const user = await requireRole("agent", `/dashboard/grupper/${slug}`);
+  const user = await requireVerifiedAgent(`/dashboard/grupper/${slug}`);
 
   if (!hasSupabaseEnv()) {
     notFound();

@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireVerifiedAgent } from "@/lib/auth";
 import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const MAX_BODY_LENGTH = 5000;
 
@@ -42,7 +43,7 @@ export async function updateAgentProfileAction(_: { error?: string; success?: st
 }
 
 export async function sendMessageAction(_: { error?: string; success?: string } | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard");
+  const user = await requireVerifiedAgent("/dashboard");
   const receiverId = String(formData.get("receiver_id") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
 
@@ -50,7 +51,27 @@ export async function sendMessageAction(_: { error?: string; success?: string } 
     return { error: "Mottagare och meddelande krävs." };
   }
 
+  if (receiverId === user.id) {
+    return { error: "Du kan inte skicka meddelande till dig själv." };
+  }
+
+  const rateLimit = await checkRateLimit("messages", user.id);
+  if (!rateLimit.ok) {
+    return { error: rateLimit.error };
+  }
+
   const supabase = await createSupabaseServerClient();
+
+  const { data: block } = await supabase
+    .from("user_blocks")
+    .select("blocker_id")
+    .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${receiverId}),and(blocker_id.eq.${receiverId},blocked_id.eq.${user.id})`)
+    .maybeSingle();
+
+  if (block) {
+    return { error: "Du kan inte skicka meddelande till denna användare." };
+  }
+
   const { error } = await supabase.from("messages").insert({
     sender_id: user.id,
     receiver_id: receiverId,
@@ -66,7 +87,7 @@ export async function sendMessageAction(_: { error?: string; success?: string } 
 }
 
 export async function createAgentGroupAction(_: { error?: string; success?: string } | undefined, formData: FormData) {
-  const user = await requireRole("agent", "/dashboard/grupper");
+  const user = await requireVerifiedAgent("/dashboard/grupper");
 
   const name = String(formData.get("name") ?? "").trim().slice(0, 120);
   const description = String(formData.get("description") ?? "").trim().slice(0, 1000);
@@ -112,7 +133,7 @@ export async function createAgentGroupAction(_: { error?: string; success?: stri
 }
 
 export async function joinAgentGroupAction(groupId: string) {
-  const user = await requireRole("agent", "/dashboard/grupper");
+  const user = await requireVerifiedAgent("/dashboard/grupper");
   const supabase = await createSupabaseServerClient();
 
   const { data: group } = await supabase
@@ -144,7 +165,7 @@ export async function joinAgentGroupAction(groupId: string) {
 }
 
 export async function leaveAgentGroupAction(groupId: string) {
-  const user = await requireRole("agent", "/dashboard/grupper");
+  const user = await requireVerifiedAgent("/dashboard/grupper");
   const supabase = await createSupabaseServerClient();
 
   const { data: group } = await supabase
@@ -162,7 +183,7 @@ export async function leaveAgentGroupAction(groupId: string) {
 }
 
 export async function approveJoinRequestAction(requestId: string) {
-  const user = await requireRole("agent", "/dashboard/grupper");
+  const user = await requireVerifiedAgent("/dashboard/grupper");
   const supabase = await createSupabaseServerClient();
 
   const { data: request } = await supabase
