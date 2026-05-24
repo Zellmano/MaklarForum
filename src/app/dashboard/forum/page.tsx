@@ -2,6 +2,7 @@ import { requireVerifiedAgent } from "@/lib/auth";
 import { getForumPosts } from "@/lib/data";
 import { ForumPostForm } from "@/components/forum-post-form";
 import { ForumPostCard } from "@/components/forum-post-card";
+import { EmptyState } from "@/components/empty-state";
 import type { ForumCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<ForumCategory, string> = {
@@ -77,9 +78,10 @@ export default async function ForumPage({
 
       <section className="mt-6 space-y-3">
         {filtered.length === 0 ? (
-          <div className="card">
-            <p className="text-sm text-[var(--muted)]">Inga inlägg i denna kategori ännu.</p>
-          </div>
+          <EmptyState
+            title={activeCategory === "alla" ? "Forumet är tomt" : "Inga inlägg i denna kategori"}
+            description="Var först med att starta en diskussion. Skriv om aktuella branschfrågor, dela en erfarenhet eller fråga om hjälp."
+          />
         ) : null}
         {filtered.map((post) => (
           <ForumPostCard

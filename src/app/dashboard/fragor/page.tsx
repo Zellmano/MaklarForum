@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireVerifiedAgent } from "@/lib/auth";
 import { AgentTipForm } from "@/components/agent-tip-form";
 import { TipVoteControls } from "@/components/tip-vote-controls";
+import { EmptyState } from "@/components/empty-state";
 import { getAgentDashboardQuestionFeed, getAgentTips, getAgentTipsByAuthor } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 
@@ -30,7 +31,12 @@ export default async function AgentQuestionsPage() {
       <section className="mt-6 card space-y-3">
         <h2 className="text-xl">Aktuella frågor</h2>
         {unansweredFirst.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Inga frågor ännu. Ställ den första!</p>
+          <EmptyState
+            title="Inga frågor ännu"
+            description="Var först med att ställa en fråga till andra mäklare. Bra ämnen: juridik, budgivning, lokala marknader, verktyg."
+            ctaHref="/dashboard/fragor/ny"
+            ctaLabel="Ställ första frågan"
+          />
         ) : null}
         {unansweredFirst.map((question) => (
           <Link

@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { UserAvatar } from "@/components/user-avatar";
+import { EmptyState } from "@/components/empty-state";
 
 export default async function AgentMessagesPage() {
   const user = await requireUser("/dashboard/messages");
@@ -28,9 +29,14 @@ export default async function AgentMessagesPage() {
       <h1 className="text-4xl">Inkorg</h1>
       <p className="mt-2 text-[var(--muted)]">Dina konversationer med andra mäklare.</p>
 
-      <section className="mt-6 card">
+      <section className="mt-6">
         {threads.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Inga konversationer ännu. Skicka ett meddelande till en kollega via mäklarkatalogen.</p>
+          <EmptyState
+            title="Inga konversationer ännu"
+            description="Hitta kollegor i mäklarkatalogen och skicka första meddelandet."
+            ctaHref="/dashboard/medlemmar"
+            ctaLabel="Bläddra bland mäklare"
+          />
         ) : null}
         <div className="space-y-3">
           {threads.map((thread) => (

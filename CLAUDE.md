@@ -186,7 +186,7 @@ src/app/
 - **EU-hosting:** Vercel `arn1` (Stockholm) + Supabase EU-region
 - **Företagsmail:** Blockerar gmail.com, hotmail.com, outlook.com, icloud.com, yahoo.com, live.com
 - **Manuell verifiering:** Admin godkänner varje ny mäklare innan profilen aktiveras
-- **GDPR:** Soft-delete, audit trail, datalagring i EU
+- **GDPR:** Hard-delete via Art. 17-flöde (profil → auth-cascade), self-service export (Art. 15), datalagring i EU
 
 ---
 
@@ -197,7 +197,7 @@ src/app/
 - [ ] RLS-policies enforcar korrekt isolation
 - [ ] Laddningstillstånd och felhantering
 - [ ] Alla texter på svenska
-- [ ] Soft-delete istället för hard-delete
+- [ ] Hard-delete vid GDPR-radering (cascade), state-flagga vid suspendering
 - [ ] Formulärvalidering (klient + server)
 - [ ] Konventionellt commit-meddelande
 

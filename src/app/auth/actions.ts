@@ -87,7 +87,7 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
   if (data.user) {
     const slug = toSlug(`${fullName}-${city}`);
 
-    await supabase.from("profiles").upsert({
+    const { error: profileError } = await supabase.from("profiles").upsert({
       id: data.user.id,
       role: "agent",
       full_name: fullName,
@@ -98,6 +98,19 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
       profile_slug: slug,
       accepted_terms_at: new Date().toISOString(),
     });
+
+    if (profileError) {
+      try {
+        const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+        const admin = createSupabaseAdminClient();
+        await admin.auth.admin.deleteUser(data.user.id);
+      } catch {
+        // If cleanup also fails, the auth user is orphaned; getCurrentUser will
+        // refuse to mint a profile, so the account is effectively dead. Admin
+        // can clean it up manually.
+      }
+      return { error: `Kunde inte skapa profil: ${profileError.message}` };
+    }
 
     if (inviteToken) {
       await supabase
