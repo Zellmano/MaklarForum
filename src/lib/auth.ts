@@ -128,3 +128,17 @@ export async function requireVerifiedAgent(nextPath = "/dashboard") {
   }
   return user;
 }
+
+/**
+ * Lets pending mäklare in for read-only browse and low-risk actions
+ * (group join-requests, sending invites). Suspended users are still bounced.
+ * Use this for views and actions that should be available before admin verification.
+ */
+export async function requireAgent(nextPath = "/dashboard") {
+  const user = await requireRole("agent", nextPath);
+  if (user.role === "admin") return user;
+  if (user.verificationStatus === "suspended") {
+    redirect("/dashboard/pending?status=suspended");
+  }
+  return user;
+}

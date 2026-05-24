@@ -17,7 +17,7 @@ export default async function PendingPage({
       </h1>
       <p className="mt-3 text-[var(--muted)]">
         {isSuspended
-          ? "Din profil har pausats av en admin. Vanligast är att vi behöver verifiera något — kontakta oss på support@maklarforum.se så hjälper vi dig snabbt."
+          ? "Din profil har pausats av en admin. Vanligast är att vi behöver verifiera något — kontakta oss på maklarforum@gmail.com så hjälper vi dig snabbt."
           : "Tack för att du registrerade dig på MäklarForum. En admin granskar din profil och aktiverar kontot inom 1–2 vardagar."}
       </p>
 

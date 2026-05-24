@@ -91,7 +91,7 @@ export async function deleteMyAccountAction(
     admin = createSupabaseAdminClient();
   } catch {
     return {
-      error: "Kontoradering är inte tillgängligt just nu. Kontakta support@maklarforum.se.",
+      error: "Kontoradering är inte tillgängligt just nu. Kontakta maklarforum@gmail.com.",
     };
   }
 

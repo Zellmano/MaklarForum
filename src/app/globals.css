@@ -93,3 +93,24 @@ a {
   padding: 14px;
   background: white;
 }
+
+/* Hero — replace .hero-image background-image with a real photo when available */
+.hero {
+  min-height: 380px;
+}
+
+.hero-image {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(16, 75, 56, 0.18) 0, transparent 28%),
+    radial-gradient(circle at 80% 20%, rgba(16, 75, 56, 0.12) 0, transparent 24%),
+    radial-gradient(circle at 65% 75%, rgba(16, 75, 56, 0.16) 0, transparent 28%),
+    radial-gradient(circle at 30% 80%, rgba(16, 75, 56, 0.10) 0, transparent 22%),
+    radial-gradient(circle at 50% 50%, rgba(16, 75, 56, 0.08) 0, transparent 30%),
+    linear-gradient(135deg, #fdfbf6 0%, #f6f1e6 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-overlay {
+  background: linear-gradient(120deg, rgba(253, 251, 246, 0.85) 0%, rgba(253, 251, 246, 0.55) 60%, rgba(253, 251, 246, 0.35) 100%);
+}

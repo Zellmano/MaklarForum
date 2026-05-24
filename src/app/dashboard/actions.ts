@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole, requireVerifiedAgent } from "@/lib/auth";
+import { requireAgent, requireRole, requireVerifiedAgent } from "@/lib/auth";
 import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -133,7 +133,7 @@ export async function createAgentGroupAction(_: { error?: string; success?: stri
 }
 
 export async function joinAgentGroupAction(groupId: string) {
-  const user = await requireVerifiedAgent("/dashboard/grupper");
+  const user = await requireAgent("/dashboard/grupper");
   const supabase = await createSupabaseServerClient();
 
   const { data: group } = await supabase

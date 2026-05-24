@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
+import { requireAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MAX_INVITES_PER_DAY = 3;
@@ -12,7 +12,7 @@ export async function createInvitationAction(
   _: ActionState | undefined,
   formData: FormData,
 ): Promise<ActionState> {
-  const user = await requireUser("/dashboard");
+  const user = await requireAgent("/dashboard");
   const supabase = await createSupabaseServerClient();
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
