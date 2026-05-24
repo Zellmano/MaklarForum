@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <strong>Underbiträden:</strong> Supabase (databas + auth), Vercel (hosting). Inga andra tredjeparter har tillgång till dina personuppgifter under beta.
         </p>
         <p>
-          <strong>Dina rättigheter:</strong> du kan när som helst begära registerutdrag, rättelse eller radering enligt GDPR. Kontakta support@maklarforum.se.
+          <strong>Dina rättigheter:</strong> du kan när som helst exportera all din data eller radera ditt konto direkt under <em>Min profil → Mina data &amp; integritet</em>. För rättelse av enskilda uppgifter, kontakta support@maklarforum.se.
         </p>
         <p>
           <strong>Cookies:</strong> vi använder endast nödvändiga cookies för inloggning och session.

@@ -11,6 +11,7 @@ import {
   getMessageThreads,
 } from "@/lib/data";
 import { acceptConnectionAction, removeConnectionAction } from "@/app/dashboard/profile-actions";
+import { GdprControls } from "@/components/gdpr-controls";
 
 export default async function AgentProfileDashboardPage() {
   const user = await requireRole("agent", "/dashboard/profil");
@@ -241,6 +242,18 @@ export default async function AgentProfileDashboardPage() {
               </Link>
             ))}
             {groups.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga grupper ännu.</p> : null}
+          </div>
+        </article>
+      </section>
+
+      <section className="mt-6">
+        <article className="card">
+          <h2 className="text-xl">Mina data & integritet</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Dina rättigheter enligt GDPR — exportera all din data eller radera ditt konto permanent.
+          </p>
+          <div className="mt-4">
+            <GdprControls />
           </div>
         </article>
       </section>
