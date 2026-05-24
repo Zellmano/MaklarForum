@@ -135,3 +135,18 @@ export interface AgentTip {
   myVote: -1 | 0 | 1;
   createdAt: string;
 }
+
+export type ForumCategory = "juridik" | "budgivning" | "teknik" | "rekrytering" | "allmant";
+
+export interface ForumPost {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  category: ForumCategory;
+  title: string;
+  body: string;
+  replyCount: number;
+  isRecruiting: boolean;
+  createdAt: string;
+}

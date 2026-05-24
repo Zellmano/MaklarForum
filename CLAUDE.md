@@ -45,11 +45,13 @@ MäklarForum är ett **slutet community för verifierade fastighetsmäklare i Sv
 
 **B) Mäklargrupper (huvudfeature)**
 - Geografiskt knutna grupper (kommun/region)
-- **Offentliga grupper:** Alla verifierade mäklare kan gå med direkt
-- **Privata grupper:** Skickar in join-request, owner/admin godkänner
+- **Privata by default:** Nya grupper skapas privata; gå med via join-request som owner godkänner
+- **Offentliga grupper:** Stöds av datamodellen (`is_private = false`) men används inte i V1-default
 - Alla mäklare kan föreslå nya grupper (admin godkänner)
 - En mäklare kan vara med i flera grupper
-- Inom grupp: diskussioner, röstning, kommentarer
+- Default-grupp som nya mäklare auto-joinar vid onboarding
+- Inom grupp: diskussioner, röstning, polls, kommentarer
+- Invite-system: spårade unika länkar, max 3 invites/dag
 
 **C) Diskussioner & Frågor**
 - Mäklare ställer frågor till andra mäklare
@@ -59,8 +61,10 @@ MäklarForum är ett **slutet community för verifierade fastighetsmäklare i Sv
 - Kommentarer på svar
 
 **D) Mäklarprofiler (internt)**
-- Profilsida med namn, firma, stad, bio
+- Profilsida med namn, firma, stad, bio, avatar-upload
 - Lista på senaste svar och diskussioner
+- Friends/connections mellan mäklare
+- Avatar-bubblor visas konsekvent i alla vyer
 - Bara synlig för inloggade mäklare (B2B-community, inte publik SEO)
 
 **E) Direktmeddelanden**
@@ -118,7 +122,7 @@ Implementerade tabeller (se `supabase/migrations/`):
 |---|---|
 | `profiles` | Mäklarprofiler kopplade till `auth.users` |
 | `agent_areas` | Mäklarens bevakade kommuner/regioner |
-| `agent_groups` | Mäklargrupper med geo-knytning, offentliga/privata |
+| `agent_groups` | Mäklargrupper med geo-knytning, privata by default (`is_private` flag) |
 | `agent_group_members` | Medlemskap (owner/member) |
 | `group_join_requests` | Köpan för privata grupper |
 | `questions` | Diskussioner/frågor (mäklare-till-mäklare) |
@@ -163,13 +167,13 @@ src/app/
 │   │   ├── page.tsx          # Alla frågor (geo-filtrerade)
 │   │   ├── ny/page.tsx
 │   │   └── [slug]/page.tsx
-│   ├── maklare/
-│   │   ├── page.tsx          # Mäklarkatalog (internt)
+│   ├── medlemmar/            # Intern mäklarkatalog
+│   │   ├── page.tsx
 │   │   └── [slug]/page.tsx
 │   ├── messages/
 │   │   ├── page.tsx
 │   │   └── [userId]/page.tsx
-│   └── forum/page.tsx        # Internt forum
+│   └── forum/page.tsx        # Internt forum (juridik, teknik, rekrytering)
 └── admin/
     └── page.tsx              # Verifiering, moderering, översikt
 ```
@@ -223,5 +227,5 @@ src/app/
 
 ---
 
-*Senast uppdaterad: 2026-04-24*
+*Senast uppdaterad: 2026-05-24*
 *Status: V1 redo för beta-test*

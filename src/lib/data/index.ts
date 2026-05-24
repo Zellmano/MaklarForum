@@ -1,7 +1,7 @@
 import { agents as mockAgents, answers as mockAnswers, questions as mockQuestions } from "@/lib/mock-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
-import { AgentGroup, AgentTip, ConversationMessage, MessageThread, PendingModerationItem, WatchedThread } from "@/lib/types";
+import { AgentGroup, AgentTip, ConversationMessage, ForumPost, MessageThread, PendingModerationItem, WatchedThread } from "@/lib/types";
 
 export async function getQuestions() {
   if (!hasSupabaseEnv()) {
@@ -903,4 +903,50 @@ export async function getAgentTipsByAuthor(authorId: string, viewerId?: string):
       if (b.score !== a.score) return b.score - a.score;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+}
+
+export async function getForumPosts(limit = 50): Promise<ForumPost[]> {
+  if (!hasSupabaseEnv()) {
+    return [];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: rows } = await supabase
+    .from("forum_posts")
+    .select("id, author_id, category, title, body, reply_count, is_recruiting, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (!rows || rows.length === 0) {
+    return [];
+  }
+
+  const authorIds = [...new Set(rows.map((row) => row.author_id))];
+  const { data: authors } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .in("id", authorIds);
+
+  const authorMap = new Map(
+    (authors ?? []).map((a) => [
+      a.id,
+      { name: (a.full_name as string) ?? "Okänd mäklare", avatarUrl: (a.avatar_url as string | null) ?? null },
+    ])
+  );
+
+  return rows.map((row) => {
+    const author = authorMap.get(row.author_id);
+    return {
+      id: row.id,
+      authorId: row.author_id,
+      authorName: author?.name ?? "Okänd mäklare",
+      authorAvatarUrl: author?.avatarUrl ?? null,
+      category: row.category,
+      title: row.title,
+      body: row.body,
+      replyCount: row.reply_count ?? 0,
+      isRecruiting: row.is_recruiting ?? false,
+      createdAt: row.created_at,
+    };
+  });
 }

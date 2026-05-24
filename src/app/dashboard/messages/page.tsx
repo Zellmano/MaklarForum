@@ -10,7 +10,7 @@ export default async function AgentMessagesPage() {
   const user = await requireUser("/dashboard/messages");
   const threads = await getMessageThreads(user.id);
 
-  let avatarMap = new Map<string, string | null>();
+  const avatarMap = new Map<string, string | null>();
   if (hasSupabaseEnv() && threads.length > 0) {
     const supabase = await createSupabaseServerClient();
     const ids = threads.map((t) => t.otherUserId);
