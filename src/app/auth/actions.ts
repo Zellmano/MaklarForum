@@ -39,7 +39,7 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
 
   if (portal === "agent" && profile?.role !== "agent" && profile?.role !== "admin") {
     await supabase.auth.signOut();
-    return { error: "Detta konto är inte registrerat som mäklare. Använd kundinloggning eller kontakta admin." };
+    return { error: "Detta konto är inte registrerat som mäklare. Kontakta admin om du tror att detta är ett misstag." };
   }
 
   const role = profile?.role ?? "agent";
@@ -146,6 +146,7 @@ export async function requestPasswordResetAction(
 
   const supabase = await createSupabaseServerClient();
   const origin =
+    process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 

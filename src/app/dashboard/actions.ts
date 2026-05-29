@@ -147,17 +147,24 @@ export async function joinAgentGroupAction(groupId: string) {
   }
 
   if (group.is_private) {
-    await supabase.from("group_join_requests").insert({
+    // Unique (group_id, agent_id, status) guards against duplicates from
+    // double-clicks; ignore the conflict silently.
+    const { error } = await supabase.from("group_join_requests").insert({
       group_id: groupId,
       agent_id: user.id,
       status: "pending",
     });
+    if (error && !error.message.includes("duplicate")) {
+      console.error("joinAgentGroupAction join_request failed", error);
+    }
   } else {
-    await supabase.from("agent_group_members").insert({
-      group_id: groupId,
-      agent_id: user.id,
-      role: "member",
-    });
+    // upsert keeps double-click idempotent.
+    await supabase
+      .from("agent_group_members")
+      .upsert(
+        { group_id: groupId, agent_id: user.id, role: "member" },
+        { onConflict: "group_id,agent_id" },
+      );
   }
 
   revalidatePath("/dashboard/grupper");
@@ -203,16 +210,24 @@ export async function approveJoinRequestAction(requestId: string) {
 
   if (!ownership || ownership.role !== "owner") return;
 
+  // Add membership FIRST so we never end up with an "approved" request and no
+  // membership row (the inverse is recoverable; this isn't).
+  const { error: memberError } = await supabase
+    .from("agent_group_members")
+    .upsert(
+      { group_id: request.group_id, agent_id: request.agent_id, role: "member" },
+      { onConflict: "group_id,agent_id" },
+    );
+
+  if (memberError) {
+    console.error("approveJoinRequestAction member upsert failed", memberError);
+    return;
+  }
+
   await supabase
     .from("group_join_requests")
     .update({ status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString() })
     .eq("id", requestId);
-
-  await supabase.from("agent_group_members").insert({
-    group_id: request.group_id,
-    agent_id: request.agent_id,
-    role: "member",
-  });
 
   revalidatePath(`/dashboard/grupper/${request.group_id}`);
 }

@@ -10,6 +10,15 @@
   --gold: #b88a2c;
   --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+
+  /* ── Background images ────────────────────────────────────────────────
+     Swap these for real photos by replacing the files in /public/images/
+     (keep the same names) OR by changing the url() below to your file.
+     If a referenced file is missing the layout still works — it just shows
+     the warm gradient underneath. */
+  --app-bg-image: url("/images/site-bg.svg");
+  --app-bg-opacity: 0.45;
+  --hero-bg-image: url("/images/hero-bg.svg");
 }
 
 @theme inline {
@@ -30,6 +39,21 @@ body {
     var(--sand);
   color: var(--ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle site-wide background image layer — sits above the warm gradient,
+   below all content. Fixed so it stays calm while the page scrolls. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--app-bg-image);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--app-bg-opacity);
+  pointer-events: none;
 }
 
 h1,
@@ -47,9 +71,19 @@ a {
 .card {
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: var(--paper);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(4px);
   padding: 20px;
-  box-shadow: 0 8px 30px rgba(22, 32, 42, 0.05);
+  box-shadow: 0 10px 34px rgba(22, 32, 42, 0.06);
+  transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+/* Lift only cards that are themselves links / contain a primary link target. */
+a.card:hover,
+.card-hover:hover {
+  box-shadow: 0 16px 44px rgba(22, 32, 42, 0.1);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
 }
 
 .pill {
@@ -59,6 +93,27 @@ a {
   padding: 0.48rem 0.85rem;
   font-size: 0.78rem;
   font-weight: 600;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+button.pill,
+a.pill {
+  cursor: pointer;
+}
+
+button.pill:hover,
+a.pill:hover {
+  transform: translateY(-1px);
+}
+
+.pill-dark:hover {
+  box-shadow: 0 6px 18px rgba(16, 74, 77, 0.28);
+}
+
+.pill:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
 }
 
 .pill-light {
@@ -94,23 +149,17 @@ a {
   background: white;
 }
 
-/* Hero — replace .hero-image background-image with a real photo when available */
+/* Hero — set --hero-bg-image (in :root) to a real photo when available. */
 .hero {
   min-height: 380px;
 }
 
 .hero-image {
-  background:
-    radial-gradient(circle at 20% 30%, rgba(16, 75, 56, 0.18) 0, transparent 28%),
-    radial-gradient(circle at 80% 20%, rgba(16, 75, 56, 0.12) 0, transparent 24%),
-    radial-gradient(circle at 65% 75%, rgba(16, 75, 56, 0.16) 0, transparent 28%),
-    radial-gradient(circle at 30% 80%, rgba(16, 75, 56, 0.10) 0, transparent 22%),
-    radial-gradient(circle at 50% 50%, rgba(16, 75, 56, 0.08) 0, transparent 30%),
-    linear-gradient(135deg, #fdfbf6 0%, #f6f1e6 100%);
+  background-image: var(--hero-bg-image);
   background-size: cover;
   background-position: center;
 }
 
 .hero-overlay {
-  background: linear-gradient(120deg, rgba(253, 251, 246, 0.85) 0%, rgba(253, 251, 246, 0.55) 60%, rgba(253, 251, 246, 0.35) 100%);
+  background: linear-gradient(120deg, rgba(253, 251, 246, 0.9) 0%, rgba(253, 251, 246, 0.62) 58%, rgba(253, 251, 246, 0.4) 100%);
 }

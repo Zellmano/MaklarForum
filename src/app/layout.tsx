@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AuthHashHandler } from "@/components/auth-hash-handler";
 
 export const metadata: Metadata = {
   title: {
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <body>
+        <AuthHashHandler />
         <SiteHeader />
         <main className="mx-auto w-full max-w-6xl px-4 pt-8 sm:px-6">{children}</main>
         <SiteFooter />

@@ -8,14 +8,16 @@ import { canPublish } from "@/lib/moderation";
 import type { ForumCategory } from "@/lib/types";
 
 const VALID_CATEGORIES: ForumCategory[] = ["juridik", "budgivning", "teknik", "rekrytering", "allmant"];
+const MAX_TITLE_LENGTH = 200;
+const MAX_BODY_LENGTH = 10000;
 
 type ActionState = { error?: string; success?: string };
 
 export async function createForumPostAction(_: ActionState | undefined, formData: FormData): Promise<ActionState> {
   const user = await requireVerifiedAgent("/dashboard/forum");
 
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, MAX_TITLE_LENGTH);
+  const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
   const categoryRaw = String(formData.get("category") ?? "allmant").trim();
   const isRecruiting = formData.get("is_recruiting") === "on";
 
@@ -60,8 +62,8 @@ export async function createForumPostAction(_: ActionState | undefined, formData
 export async function updateForumPostAction(postId: string, formData: FormData): Promise<ActionState> {
   await requireVerifiedAgent("/dashboard/forum");
 
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim().slice(0, MAX_TITLE_LENGTH);
+  const body = String(formData.get("body") ?? "").trim().slice(0, MAX_BODY_LENGTH);
   const categoryRaw = String(formData.get("category") ?? "allmant").trim();
 
   if (!title || title.length < 3) {

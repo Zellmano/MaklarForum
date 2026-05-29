@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const ALLOWED_AVATAR_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 export async function uploadAvatarAction(formData: FormData): Promise<{ error?: string; url?: string }> {
   const user = await requireUser("/dashboard/profil");
   const file = formData.get("avatar") as File | null;
@@ -16,7 +22,11 @@ export async function uploadAvatarAction(formData: FormData): Promise<{ error?: 
     return { error: "Max 2 MB." };
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const ext = ALLOWED_AVATAR_TYPES[file.type];
+  if (!ext) {
+    return { error: "Endast JPG, PNG eller WebP är tillåtet." };
+  }
+
   const path = `${user.id}/avatar.${ext}`;
 
   const supabase = await createSupabaseServerClient();

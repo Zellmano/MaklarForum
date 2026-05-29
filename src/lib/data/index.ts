@@ -292,7 +292,7 @@ export async function getAnswersByAgent(agentId: string) {
   }));
 }
 
-export async function getPendingAgentVerifications() {
+export async function getPendingAgentVerifications(limit = 100) {
   if (!hasSupabaseEnv()) {
     return [];
   }
@@ -303,7 +303,8 @@ export async function getPendingAgentVerifications() {
     .select("id, full_name, email, firm, fmi_number, created_at")
     .eq("role", "agent")
     .eq("verification_status", "pending")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(limit);
 
   return data ?? [];
 }
@@ -335,7 +336,7 @@ export async function getAdminMetrics() {
   };
 }
 
-export async function getPendingGroupApprovals() {
+export async function getPendingGroupApprovals(limit = 100) {
   if (!hasSupabaseEnv()) {
     return [];
   }
@@ -345,7 +346,8 @@ export async function getPendingGroupApprovals() {
     .from("agent_groups")
     .select("id, name, municipality, region, created_at, created_by")
     .eq("status", "pending")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(limit);
 
   if (!data || data.length === 0) {
     return [];
@@ -365,7 +367,7 @@ export async function getPendingGroupApprovals() {
   }));
 }
 
-export async function getPendingModerationItems(): Promise<PendingModerationItem[]> {
+export async function getPendingModerationItems(limit = 100): Promise<PendingModerationItem[]> {
   if (!hasSupabaseEnv()) {
     return [];
   }
@@ -375,7 +377,8 @@ export async function getPendingModerationItems(): Promise<PendingModerationItem
     .from("moderation_queue")
     .select("id, question_id, proposed_by, body, blocked_terms, created_at")
     .eq("status", "pending")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(limit);
 
   if (!rows || rows.length === 0) {
     return [];
