@@ -4,7 +4,7 @@ import { requireAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { UserAvatar } from "@/components/user-avatar";
-import { joinAgentGroupAction, leaveAgentGroupAction } from "@/app/dashboard/actions";
+import { joinAgentGroupAction, leaveAgentGroupAction, approveJoinRequestAction, rejectJoinRequestAction } from "@/app/dashboard/actions";
 import { formatDate } from "@/lib/format";
 import GroupInviteForm from "@/components/group-invite-form";
 import PollCreateForm from "@/components/poll-create-form";
@@ -73,6 +73,25 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
     .eq("status", "pending")
     .maybeSingle();
   const hasPendingRequest = Boolean(myRequest);
+
+  // Group owners and admins can review pending applications.
+  const isOwner = (membership as { role?: string } | null)?.role === "owner";
+  const canModerate = isAdmin || isOwner;
+  let pendingRequests: {
+    id: string;
+    agent_id: string;
+    created_at: string;
+    profiles: { full_name: string; firm: string | null; city: string | null; avatar_url: string | null; profile_slug: string | null } | { full_name: string; firm: string | null; city: string | null; avatar_url: string | null; profile_slug: string | null }[] | null;
+  }[] = [];
+  if (canModerate) {
+    const { data } = await supabase
+      .from("group_join_requests")
+      .select("id, agent_id, created_at, profiles:agent_id(full_name, firm, city, avatar_url, profile_slug)")
+      .eq("group_id", group.id)
+      .eq("status", "pending")
+      .order("created_at");
+    pendingRequests = data ?? [];
+  }
 
   // Admins read every group in the background without being members; never list
   // the admin's own row as a participant.
@@ -150,6 +169,38 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           </div>
         </div>
       </section>
+
+      {canModerate && pendingRequests.length > 0 && (
+        <section className="mt-6 card border-[var(--accent)]">
+          <h2 className="text-xl">Ansökningar att granska ({pendingRequests.length})</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">Mäklare som vill gå med i gruppen. Godkänn för att ge tillgång.</p>
+          <div className="mt-4 space-y-3">
+            {pendingRequests.map((req) => {
+              const p = Array.isArray(req.profiles) ? req.profiles[0] : req.profiles;
+              if (!p) return null;
+              return (
+                <div key={req.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar url={p.avatar_url} name={p.full_name} size="sm" />
+                    <div>
+                      <p className="text-sm font-medium">{p.full_name}</p>
+                      <p className="text-xs text-[var(--muted)]">{p.firm || "-"} &bull; {p.city || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <form action={approveJoinRequestAction.bind(null, req.id)}>
+                      <button className="pill pill-dark text-xs">Godkänn</button>
+                    </form>
+                    <form action={rejectJoinRequestAction.bind(null, req.id)}>
+                      <button className="pill pill-light text-xs">Avböj</button>
+                    </form>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {!canViewContent ? (
         <section className="mt-6 card text-center">

@@ -247,7 +247,9 @@ export async function approveJoinRequestAction(requestId: string) {
     .eq("agent_id", user.id)
     .maybeSingle();
 
-  if (!ownership || ownership.role !== "owner") return;
+  // Group owners approve their own members; admins can approve anywhere
+  // (they manage groups in the background without being members).
+  if (user.role !== "admin" && (!ownership || ownership.role !== "owner")) return;
 
   // Add membership FIRST so we never end up with an "approved" request and no
   // membership row (the inverse is recoverable; this isn't).
@@ -285,6 +287,35 @@ export async function approveJoinRequestAction(requestId: string) {
       groupSlug: group.slug,
     });
   }
+
+  revalidatePath(`/dashboard/grupper/${request.group_id}`);
+}
+
+export async function rejectJoinRequestAction(requestId: string) {
+  const user = await requireVerifiedAgent("/dashboard/grupper");
+  const supabase = await createSupabaseServerClient();
+
+  const { data: request } = await supabase
+    .from("group_join_requests")
+    .select("id, group_id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!request || request.status !== "pending") return;
+
+  const { data: ownership } = await supabase
+    .from("agent_group_members")
+    .select("role")
+    .eq("group_id", request.group_id)
+    .eq("agent_id", user.id)
+    .maybeSingle();
+
+  if (user.role !== "admin" && (!ownership || ownership.role !== "owner")) return;
+
+  await supabase
+    .from("group_join_requests")
+    .update({ status: "rejected", reviewed_by: user.id, reviewed_at: new Date().toISOString() })
+    .eq("id", requestId);
 
   revalidatePath(`/dashboard/grupper/${request.group_id}`);
 }
