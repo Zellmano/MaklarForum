@@ -24,6 +24,25 @@ export async function approveAgentAction(formData: FormData) {
     );
   }
 
+  // Honor the invitation: if this agent registered via an invite tied to a
+  // specific group, place them in that group on approval.
+  const { data: invites } = await admin
+    .from("invitations")
+    .select("group_id")
+    .eq("registered_user_id", agentId)
+    .not("group_id", "is", null);
+
+  const invitedGroupIds = Array.from(
+    new Set((invites ?? []).map((i) => i.group_id).filter((id): id is string => Boolean(id))),
+  );
+
+  if (invitedGroupIds.length > 0) {
+    await admin.from("agent_group_members").upsert(
+      invitedGroupIds.map((groupId) => ({ group_id: groupId, agent_id: agentId, role: "member" })),
+      { onConflict: "group_id,agent_id" },
+    );
+  }
+
   revalidatePath("/admin");
   revalidatePath("/dashboard/grupper");
 }

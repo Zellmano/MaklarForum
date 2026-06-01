@@ -12,6 +12,8 @@ import {
 } from "@/lib/data";
 import { acceptConnectionAction, removeConnectionAction } from "@/app/dashboard/profile-actions";
 import { GdprControls } from "@/components/gdpr-controls";
+import { NotificationSettings } from "@/components/notification-settings";
+import { emailNotificationsEnabled } from "@/lib/email";
 
 export default async function AgentProfileDashboardPage() {
   const user = await requireRole("agent", "/dashboard/profil");
@@ -22,7 +24,7 @@ export default async function AgentProfileDashboardPage() {
     getMessageThreads(user.id),
     getAgentGroupsForUser(user.id),
     supabase.from("agent_areas").select("municipality, region").eq("agent_id", user.id),
-    supabase.from("profiles").select("full_name, firm, title, city, bio, avatar_url, profile_slug").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, firm, title, city, bio, avatar_url, profile_slug, notification_prefs").eq("id", user.id).single(),
   ]);
 
   const profile = profileRow.data;
@@ -242,6 +244,18 @@ export default async function AgentProfileDashboardPage() {
               </Link>
             ))}
             {groups.length === 0 ? <p className="text-sm text-[var(--muted)]">Inga grupper ännu.</p> : null}
+          </div>
+        </article>
+      </section>
+
+      <section className="mt-6">
+        <article className="card">
+          <h2 className="text-xl">Inställningar</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Hantera dina notiser. Mailnotiser är påslagna som standard.
+          </p>
+          <div className="mt-4">
+            <NotificationSettings enabled={emailNotificationsEnabled(profile?.notification_prefs)} />
           </div>
         </article>
       </section>

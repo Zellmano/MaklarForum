@@ -6,6 +6,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MAX_INVITES_PER_DAY = 3;
 
+// Personal-email domains can't complete registration (company mail required),
+// so block them here to avoid wasting a daily invite on a dead link.
+const blockedPersonalDomains = new Set([
+  "gmail.com",
+  "hotmail.com",
+  "outlook.com",
+  "icloud.com",
+  "yahoo.com",
+  "live.com",
+]);
+
 type ActionState = { error?: string; success?: string; inviteUrl?: string };
 
 export async function createInvitationAction(
@@ -20,6 +31,11 @@ export async function createInvitationAction(
 
   if (!email || !email.includes("@")) {
     return { error: "Ange en giltig e-postadress." };
+  }
+
+  const domain = email.split("@")[1] ?? "";
+  if (!domain || blockedPersonalDomains.has(domain)) {
+    return { error: "Använd kollegans företagsmail — personliga adresser (gmail, hotmail m.fl.) kan inte registreras." };
   }
 
   const today = new Date();

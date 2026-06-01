@@ -5,6 +5,7 @@ import { requireAgent, requireRole, requireVerifiedAgent } from "@/lib/auth";
 import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { emailNotificationsEnabled, sendGroupApprovalEmail, sendNewMessageEmail } from "@/lib/email";
 
 const MAX_BODY_LENGTH = 5000;
 
@@ -82,8 +83,46 @@ export async function sendMessageAction(_: { error?: string; success?: string } 
     return { error: error.message };
   }
 
+  await notifyNewMessage(supabase, user.id, user.fullName, receiverId);
+
   revalidatePath("/dashboard/messages");
   return { success: "Meddelandet skickades." };
+}
+
+/**
+ * Emails the receiver about a new message — but only for the first unread
+ * message in the conversation, so a burst of messages produces one email until
+ * the receiver reads them. No-ops if the receiver has disabled notifications.
+ */
+async function notifyNewMessage(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  senderId: string,
+  senderName: string,
+  receiverId: string,
+) {
+  const { count } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("sender_id", senderId)
+    .eq("receiver_id", receiverId)
+    .is("read_at", null);
+
+  if ((count ?? 0) !== 1) return;
+
+  const { data: receiver } = await supabase
+    .from("profiles")
+    .select("email, full_name, notification_prefs")
+    .eq("id", receiverId)
+    .maybeSingle();
+
+  if (!receiver?.email || !emailNotificationsEnabled(receiver.notification_prefs)) return;
+
+  await sendNewMessageEmail({
+    to: receiver.email,
+    name: receiver.full_name ?? "",
+    senderName,
+    senderId,
+  });
 }
 
 export async function createAgentGroupAction(_: { error?: string; success?: string } | undefined, formData: FormData) {
@@ -228,6 +267,24 @@ export async function approveJoinRequestAction(requestId: string) {
     .from("group_join_requests")
     .update({ status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString() })
     .eq("id", requestId);
+
+  const [{ data: approvedAgent }, { data: group }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("email, full_name, notification_prefs")
+      .eq("id", request.agent_id)
+      .maybeSingle(),
+    supabase.from("agent_groups").select("name, slug").eq("id", request.group_id).maybeSingle(),
+  ]);
+
+  if (approvedAgent?.email && group && emailNotificationsEnabled(approvedAgent.notification_prefs)) {
+    await sendGroupApprovalEmail({
+      to: approvedAgent.email,
+      name: approvedAgent.full_name ?? "",
+      groupName: group.name,
+      groupSlug: group.slug,
+    });
+  }
 
   revalidatePath(`/dashboard/grupper/${request.group_id}`);
 }

@@ -10,6 +10,44 @@ export default async function AgentGroupsPage() {
   const approved = groups.filter((group) => group.status === "approved");
   const myGroups = groups.filter((group) => group.isMember);
 
+  if (user.role === "admin") {
+    return (
+      <div>
+        <h1 className="text-4xl">Mäklargrupper</h1>
+        <p className="mt-2 text-[var(--muted)]">
+          Som admin följer du alla grupper i bakgrunden. Du står inte med som medlem och syns inte för andra.
+        </p>
+
+        <section className="mt-6 card">
+          <h2 className="text-xl">Alla grupper ({approved.length})</h2>
+          <div className="mt-4 space-y-3">
+            {approved.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Inga godkända grupper ännu.</p>
+            ) : null}
+            {approved.map((group) => (
+              <Link
+                key={group.id}
+                href={`/dashboard/grupper/${group.slug}`}
+                className="block rounded-xl border border-[var(--line)] bg-white p-3 hover:border-[var(--accent)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{group.name}</p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {group.municipality || "-"} • {group.region || "-"}
+                    </p>
+                    {group.description ? <p className="mt-1 text-sm text-[var(--muted)]">{group.description}</p> : null}
+                  </div>
+                  <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-4xl">Mäklargrupper</h1>

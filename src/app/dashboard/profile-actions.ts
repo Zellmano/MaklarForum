@@ -49,6 +49,31 @@ export async function uploadAvatarAction(formData: FormData): Promise<{ error?: 
   return { url: avatarUrl };
 }
 
+export async function updateNotificationPrefsAction(formData: FormData) {
+  const user = await requireUser("/dashboard/profil");
+  const enabled = formData.get("email_notifications") === "on";
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("notification_prefs")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const prefs =
+    profile?.notification_prefs && typeof profile.notification_prefs === "object"
+      ? (profile.notification_prefs as Record<string, unknown>)
+      : {};
+
+  await supabase
+    .from("profiles")
+    .update({ notification_prefs: { ...prefs, email_notifications: enabled } })
+    .eq("id", user.id);
+
+  revalidatePath("/dashboard/profil");
+}
+
 export async function sendConnectionRequestAction(receiverId: string) {
   const user = await requireUser("/dashboard");
   const supabase = await createSupabaseServerClient();

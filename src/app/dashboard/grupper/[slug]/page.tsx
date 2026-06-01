@@ -55,8 +55,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
       .limit(20),
   ]);
 
+  const isAdmin = user.role === "admin";
   const isMember = Boolean(membership);
   const isDefault = group.is_default === true;
+
+  // Admins read every group in the background without being members; never list
+  // the admin's own row as a participant.
+  const visibleMembers = (members ?? []).filter((m) => !isAdmin || m.agent_id !== user.id);
 
   const pollIds = (polls ?? []).map((p) => p.id);
   let allVotes: { poll_id: string; option_index: number; voter_id: string }[] = [];
@@ -93,6 +98,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
         <Link href="/dashboard/grupper" className="text-sm text-[var(--accent)] hover:underline">← Alla grupper</Link>
       </div>
 
+      {isAdmin && (
+        <p className="mb-4 rounded-xl border border-[var(--line)] bg-white/60 px-4 py-2 text-xs text-[var(--muted)]">
+          Du ser den här gruppen som admin. Du står inte med som medlem och syns inte för andra.
+        </p>
+      )}
+
       <section className="card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -104,7 +115,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             {group.description ? <p className="mt-2 text-[var(--muted)]">{group.description}</p> : null}
           </div>
           <div>
-            {isMember ? (
+            {isAdmin ? (
+              <span className="pill pill-light opacity-60">Admin-vy</span>
+            ) : isMember ? (
               isDefault ? (
                 <span className="pill pill-light opacity-60">Standardgrupp</span>
               ) : (
@@ -166,9 +179,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
 
       <section className="mt-6 grid gap-6 lg:grid-cols-2">
         <article className="card">
-          <h2 className="text-xl">Medlemmar ({members?.length ?? 0})</h2>
+          <h2 className="text-xl">Medlemmar ({visibleMembers.length})</h2>
           <div className="mt-4 grid gap-3">
-            {(members ?? []).map((m) => {
+            {visibleMembers.map((m) => {
               const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
               if (!profile) return null;
               return (
