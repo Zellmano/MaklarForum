@@ -85,7 +85,9 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
   }
 
   if (data.user) {
-    const slug = toSlug(`${fullName}-${city}`);
+    // Append a short unique suffix so two agents with the same name + city
+    // don't collide on the unique profile_slug constraint.
+    const slug = `${toSlug(`${fullName}-${city}`)}-${data.user.id.slice(0, 6)}`;
 
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: data.user.id,
