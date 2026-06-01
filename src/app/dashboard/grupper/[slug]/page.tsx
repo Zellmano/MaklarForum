@@ -58,6 +58,21 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
   const isAdmin = user.role === "admin";
   const isMember = Boolean(membership);
   const isDefault = group.is_default === true;
+  const isVerified = user.verificationStatus === "verified";
+
+  // Group content is only visible to admins (background access) and to verified
+  // members. Pending members or non-members see a locked view.
+  const canViewContent = isAdmin || (isMember && isVerified);
+
+  // Has this user already applied (pending) to a private group?
+  const { data: myRequest } = await supabase
+    .from("group_join_requests")
+    .select("status")
+    .eq("group_id", group.id)
+    .eq("agent_id", user.id)
+    .eq("status", "pending")
+    .maybeSingle();
+  const hasPendingRequest = Boolean(myRequest);
 
   // Admins read every group in the background without being members; never list
   // the admin's own row as a participant.
@@ -125,15 +140,49 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
                   <button className="pill pill-light">Lämna grupp</button>
                 </form>
               )
+            ) : hasPendingRequest ? (
+              <span className="pill pill-light opacity-60">Ansökan inskickad</span>
             ) : (
               <form action={joinAgentGroupAction.bind(null, group.id)}>
-                <button className="pill pill-dark">Begär medlemskap</button>
+                <button className="pill pill-dark">Ansök om medlemskap</button>
               </form>
             )}
           </div>
         </div>
       </section>
 
+      {!canViewContent ? (
+        <section className="mt-6 card text-center">
+          <div className="mx-auto max-w-md py-6">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--line)]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h2 className="text-xl">Innehållet är låst</h2>
+            {!isVerified ? (
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Diskussioner och omröstningar visas när din profil har godkänts av admin. Vanligtvis inom 24 timmar.
+              </p>
+            ) : hasPendingRequest ? (
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Din ansökan väntar på gruppadmins godkännande. Du ser innehållet så snart du blivit medlem.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Den här gruppen är privat. Ansök om medlemskap för att se diskussioner och omröstningar — gruppadmin godkänner nya medlemmar.
+              </p>
+            )}
+            {isVerified && !isMember && !hasPendingRequest && (
+              <form action={joinAgentGroupAction.bind(null, group.id)} className="mt-4">
+                <button className="pill pill-dark">Ansök om medlemskap</button>
+              </form>
+            )}
+          </div>
+        </section>
+      ) : (
+      <>
       <section className="mt-6 card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -217,6 +266,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
           </article>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 }

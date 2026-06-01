@@ -74,7 +74,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     if (role === "agent") {
       insertPayload.verification_status = "pending";
       if (fullName && city) {
-        insertPayload.profile_slug = toSlug(`${fullName}-${city}`);
+        insertPayload.profile_slug = `${toSlug(`${fullName}-${city}`)}-${authData.user.id.slice(0, 6)}`;
       }
     }
 
