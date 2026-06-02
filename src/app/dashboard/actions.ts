@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAgent, requireRole, requireVerifiedAgent } from "@/lib/auth";
 import { toSlug } from "@/lib/format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { emailNotificationsEnabled, sendGroupApprovalEmail, sendNewMessageEmail } from "@/lib/email";
 
@@ -12,21 +12,20 @@ const MAX_BODY_LENGTH = 5000;
 export async function updateAgentProfileAction(_: { error?: string; success?: string } | undefined, formData: FormData) {
   const user = await requireRole("agent", "/dashboard");
 
-  const fullName = String(formData.get("full_name") ?? "").trim().slice(0, 120);
+  // Name is intentionally NOT editable here — it's tied to admin verification.
   const firm = String(formData.get("firm") ?? "").trim().slice(0, 120);
   const title = String(formData.get("title") ?? "").trim().slice(0, 80);
   const city = String(formData.get("city") ?? "").trim().slice(0, 80);
   const bio = String(formData.get("bio") ?? "").trim().slice(0, 2000);
 
-  if (!fullName || !firm || !city) {
-    return { error: "Namn, firma och stad är obligatoriska." };
+  if (!firm || !city) {
+    return { error: "Firma och stad är obligatoriska." };
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("profiles")
     .update({
-      full_name: fullName,
       firm,
       title,
       city,
@@ -251,9 +250,14 @@ export async function approveJoinRequestAction(requestId: string) {
   // (they manage groups in the background without being members).
   if (user.role !== "admin" && (!ownership || ownership.role !== "owner")) return;
 
+  // The member-insert RLS only allows self-joins, so an approver can't add
+  // someone else through the normal client. Use the service-role client for the
+  // privileged writes — authorization is already enforced above.
+  const admin = createSupabaseAdminClient();
+
   // Add membership FIRST so we never end up with an "approved" request and no
   // membership row (the inverse is recoverable; this isn't).
-  const { error: memberError } = await supabase
+  const { error: memberError } = await admin
     .from("agent_group_members")
     .upsert(
       { group_id: request.group_id, agent_id: request.agent_id, role: "member" },
@@ -265,7 +269,7 @@ export async function approveJoinRequestAction(requestId: string) {
     return;
   }
 
-  await supabase
+  await admin
     .from("group_join_requests")
     .update({ status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString() })
     .eq("id", requestId);

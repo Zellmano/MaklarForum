@@ -14,7 +14,15 @@ export function AgentProfileForm({
     <form action={action} className="grid gap-3 text-sm">
       <label>
         Namn
-        <input name="full_name" defaultValue={defaults.fullName} required className="mt-1 w-full rounded-xl border border-[var(--line)] p-2" />
+        <input
+          value={defaults.fullName}
+          readOnly
+          disabled
+          className="mt-1 w-full cursor-not-allowed rounded-xl border border-[var(--line)] bg-[var(--line)]/30 p-2 text-[var(--muted)]"
+        />
+        <span className="mt-1 block text-xs text-[var(--muted)]">
+          Ditt namn är kopplat till din verifiering och kan inte ändras här. Kontakta admin om det behöver rättas.
+        </span>
       </label>
       <label>
         Firma

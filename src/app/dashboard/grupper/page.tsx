@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAgent } from "@/lib/auth";
 import { getAgentGroupsForUser } from "@/lib/data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AgentGroupCreateForm } from "@/components/agent-group-create-form";
 import { joinAgentGroupAction } from "@/app/dashboard/actions";
 
@@ -9,6 +10,16 @@ export default async function AgentGroupsPage() {
   const groups = await getAgentGroupsForUser(user.id);
   const approved = groups.filter((group) => group.status === "approved");
   const myGroups = groups.filter((group) => group.isMember);
+
+  // Groups the user has already applied to (pending) — so we show "Ansökan
+  // inskickad" instead of a join button that looks like it does nothing.
+  const supabase = await createSupabaseServerClient();
+  const { data: pending } = await supabase
+    .from("group_join_requests")
+    .select("group_id")
+    .eq("agent_id", user.id)
+    .eq("status", "pending");
+  const pendingGroupIds = new Set((pending ?? []).map((r) => r.group_id));
 
   if (user.role === "admin") {
     return (
@@ -112,9 +123,13 @@ export default async function AgentGroupsPage() {
                 <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
               </div>
               <div className="mt-3">
-                <form action={joinAgentGroupAction.bind(null, group.id)}>
-                  <button className="pill pill-dark">Begär medlemskap</button>
-                </form>
+                {pendingGroupIds.has(group.id) ? (
+                  <span className="pill pill-light opacity-60">Ansökan inskickad</span>
+                ) : (
+                  <form action={joinAgentGroupAction.bind(null, group.id)}>
+                    <button className="pill pill-dark">Ansök om medlemskap</button>
+                  </form>
+                )}
               </div>
             </article>
           ))}

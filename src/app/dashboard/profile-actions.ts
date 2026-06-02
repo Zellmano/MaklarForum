@@ -49,6 +49,35 @@ export async function uploadAvatarAction(formData: FormData): Promise<{ error?: 
   return { url: avatarUrl };
 }
 
+export async function addAgentAreaAction(_: { error?: string; success?: string } | undefined, formData: FormData) {
+  const user = await requireUser("/dashboard/profil");
+  const municipality = String(formData.get("municipality") ?? "").trim().slice(0, 80);
+  const region = String(formData.get("region") ?? "").trim().slice(0, 80);
+
+  if (!municipality || !region) {
+    return { error: "Ange både kommun och region." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("agent_areas")
+    .upsert({ agent_id: user.id, municipality, region }, { onConflict: "agent_id,municipality" });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard/profil");
+  return { success: "Området lades till." };
+}
+
+export async function removeAgentAreaAction(areaId: string) {
+  const user = await requireUser("/dashboard/profil");
+  const supabase = await createSupabaseServerClient();
+  await supabase.from("agent_areas").delete().eq("id", areaId).eq("agent_id", user.id);
+  revalidatePath("/dashboard/profil");
+}
+
 export async function updateNotificationPrefsAction(formData: FormData) {
   const user = await requireUser("/dashboard/profil");
   const enabled = formData.get("email_notifications") === "on";

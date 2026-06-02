@@ -13,6 +13,7 @@ import {
 import { acceptConnectionAction, removeConnectionAction } from "@/app/dashboard/profile-actions";
 import { GdprControls } from "@/components/gdpr-controls";
 import { NotificationSettings } from "@/components/notification-settings";
+import { AgentAreasManager } from "@/components/agent-areas-manager";
 import { emailNotificationsEnabled } from "@/lib/email";
 
 export default async function AgentProfileDashboardPage() {
@@ -23,7 +24,7 @@ export default async function AgentProfileDashboardPage() {
     getAnswersByAgent(user.id),
     getMessageThreads(user.id),
     getAgentGroupsForUser(user.id),
-    supabase.from("agent_areas").select("municipality, region").eq("agent_id", user.id),
+    supabase.from("agent_areas").select("id, municipality, region").eq("agent_id", user.id),
     supabase.from("profiles").select("full_name, firm, title, city, bio, avatar_url, profile_slug, notification_prefs").eq("id", user.id).single(),
   ]);
 
@@ -121,15 +122,8 @@ export default async function AgentProfileDashboardPage() {
           <p className="mt-4 text-sm text-[var(--muted)]">Ingen profil hittades ännu.</p>
         )}
 
-        <div className="mt-4 rounded-xl border border-[var(--line)] bg-white p-3 text-sm text-[var(--muted)]">
-          <p className="font-medium text-[var(--ink)]">Områden du verkar i</p>
-          {areaRows.data && areaRows.data.length > 0 ? (
-            <p className="mt-1">
-              {areaRows.data.map((row) => `${row.municipality}, ${row.region}`).join(" | ")}
-            </p>
-          ) : (
-            <p className="mt-1">Inga områden sparade ännu.</p>
-          )}
+        <div className="mt-4">
+          <AgentAreasManager areas={areaRows.data ?? []} />
         </div>
       </section>
 
