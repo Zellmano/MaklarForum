@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { emailNotificationsEnabled, sendGroupApprovalEmail, sendNewMessageEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 const MAX_BODY_LENGTH = 5000;
 
@@ -82,6 +83,12 @@ export async function sendMessageAction(_: { error?: string; success?: string } 
     return { error: error.message };
   }
 
+  await createNotification({
+    user_id: receiverId,
+    type: "new_message",
+    title: `Nytt meddelande från ${user.fullName}`,
+    link: `/dashboard/messages/${user.id}`,
+  });
   await notifyNewMessage(supabase, user.id, user.fullName, receiverId);
 
   revalidatePath("/dashboard/messages");
@@ -282,6 +289,15 @@ export async function approveJoinRequestAction(requestId: string) {
       .maybeSingle(),
     supabase.from("agent_groups").select("name, slug").eq("id", request.group_id).maybeSingle(),
   ]);
+
+  if (group) {
+    await createNotification({
+      user_id: request.agent_id,
+      type: "group_approved",
+      title: `Du är nu medlem i ${group.name}`,
+      link: `/dashboard/grupper/${group.slug}`,
+    });
+  }
 
   if (approvedAgent?.email && group && emailNotificationsEnabled(approvedAgent.notification_prefs)) {
     await sendGroupApprovalEmail({

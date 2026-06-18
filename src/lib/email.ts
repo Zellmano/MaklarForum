@@ -111,6 +111,48 @@ export async function sendNewMessageEmail(params: {
   });
 }
 
+export async function sendNewGroupPostEmail(params: {
+  to: string;
+  name: string;
+  groupName: string;
+  authorName: string;
+  questionTitle: string;
+  questionSlug: string;
+}): Promise<void> {
+  const href = `${appUrl()}/dashboard/fragor/${params.questionSlug}`;
+  await sendEmail({
+    to: params.to,
+    subject: `Nytt inlägg i ${params.groupName}`,
+    html: layout(
+      `Nytt inlägg i ${params.groupName}`,
+      `<p>Hej ${escapeHtml(params.name)},</p>
+       <p><strong>${escapeHtml(params.authorName)}</strong> har publicerat ett nytt inlägg i gruppen <strong>${escapeHtml(params.groupName)}</strong>:</p>
+       <p style="padding:10px 14px;background:#f3f1ec;border-radius:10px">${escapeHtml(params.questionTitle)}</p>`,
+      "Läs inlägget",
+      href,
+    ),
+  });
+}
+
+export async function sendInvitationReminderEmail(params: {
+  to: string;
+  inviterName: string;
+  inviteUrl: string;
+}): Promise<void> {
+  await sendEmail({
+    to: params.to,
+    subject: `Påminnelse: ${params.inviterName} har bjudit in dig till MäklarForum`,
+    html: layout(
+      "Du är inbjuden till MäklarForum",
+      `<p>Hej,</p>
+       <p><strong>${escapeHtml(params.inviterName)}</strong> har bjudit in dig till MäklarForum — ett slutet community för verifierade fastighetsmäklare i Sverige. Du har inte registrerat dig ännu.</p>
+       <p>Klicka nedan för att skapa ditt konto med din företagsmail.</p>`,
+      "Skapa konto",
+      params.inviteUrl,
+    ),
+  });
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

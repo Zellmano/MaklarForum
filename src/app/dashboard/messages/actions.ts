@@ -5,6 +5,7 @@ import { requireVerifiedAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { emailNotificationsEnabled, sendNewMessageEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 export async function sendConversationMessageAction(
   otherUserId: string,
@@ -49,6 +50,12 @@ export async function sendConversationMessageAction(
     return { error: error.message };
   }
 
+  await createNotification({
+    user_id: otherUserId,
+    type: "new_message",
+    title: `Nytt meddelande från ${user.fullName}`,
+    link: `/dashboard/messages/${user.id}`,
+  });
   await notifyNewMessage(supabase, user.id, user.fullName, otherUserId);
 
   revalidatePath(`/dashboard/messages/${otherUserId}`);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { appUrl, sendInvitationReminderEmail } from "@/lib/email";
 
 const MAX_INVITES_PER_DAY = 3;
 
@@ -76,12 +77,36 @@ export async function createInvitationAction(
     return { error: error.message };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const inviteUrl = `${appUrl}/register?ref=${invite.token}`;
+  const inviteUrl = `${appUrl()}/register?ref=${invite.token}`;
 
   revalidatePath("/dashboard");
   return {
     success: `Inbjudan skapad! Skicka länken till ${email}.`,
     inviteUrl,
   };
+}
+
+export async function sendInvitationReminderAction(invitationId: string) {
+  const user = await requireAgent("/dashboard");
+  const supabase = await createSupabaseServerClient();
+
+  const { data: invite } = await supabase
+    .from("invitations")
+    .select("id, email, token, status")
+    .eq("id", invitationId)
+    .eq("inviter_id", user.id)
+    .maybeSingle();
+
+  // Only remind people who haven't registered yet.
+  if (!invite || invite.status === "registered") return;
+
+  await sendInvitationReminderEmail({
+    to: invite.email,
+    inviterName: user.fullName,
+    inviteUrl: `${appUrl()}/register?ref=${invite.token}`,
+  });
+
+  await supabase.from("invitations").update({ reminded_at: new Date().toISOString() }).eq("id", invite.id);
+
+  revalidatePath("/dashboard");
 }

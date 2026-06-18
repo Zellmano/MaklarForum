@@ -21,6 +21,7 @@ export default async function AdminPage() {
   let pendingGroups: Awaited<ReturnType<typeof getPendingGroupApprovals>> = [];
   let pendingModeration: Awaited<ReturnType<typeof getPendingModerationItems>> = [];
   let users: Array<{ id: string; full_name: string; email: string; role: string; verification_status: string; subscription_status: string }> = [];
+  let invitations: Array<{ id: string; email: string; status: string; created_at: string; reminded_at: string | null; inviter: { full_name: string } | { full_name: string }[] | null }> = [];
 
   try {
     [metrics, pendingAgents, pendingGroups, pendingModeration] = await Promise.all([
@@ -30,15 +31,26 @@ export default async function AdminPage() {
       getPendingModerationItems(),
     ]);
     const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, role, verification_status, subscription_status")
-      .order("created_at", { ascending: false })
-      .limit(20);
+    const [{ data }, { data: inviteData }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, role, verification_status, subscription_status")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("invitations")
+        .select("id, email, status, created_at, reminded_at, inviter:inviter_id(full_name)")
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
     users = data ?? [];
+    invitations = inviteData ?? [];
   } catch (err) {
     console.error("Admin data fetch error:", err);
   }
+
+  const invitedTotal = invitations.length;
+  const invitedRegistered = invitations.filter((i) => i.status === "registered").length;
 
   return (
     <div>
@@ -163,6 +175,42 @@ export default async function AdminPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="mt-6 card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl">Inbjudningar</h2>
+          <span className="text-sm text-[var(--muted)]">
+            {invitedRegistered} av {invitedTotal} registrerade
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-[var(--muted)]">Alla inbjudningar som skickats, och deras status.</p>
+        <div className="mt-4 space-y-2">
+          {invitations.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">Inga inbjudningar skickade ännu.</p>
+          ) : null}
+          {invitations.map((inv) => {
+            const inviter = Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter;
+            return (
+              <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-white p-3 text-sm">
+                <div>
+                  <p className="font-medium">{inv.email}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    Inbjuden av {inviter?.full_name ?? "Okänd"} &bull; {formatDate(inv.created_at)}
+                    {inv.reminded_at ? " • påmind" : ""}
+                  </p>
+                </div>
+                <span className={`shrink-0 text-xs ${
+                  inv.status === "registered" ? "text-emerald-600" :
+                  inv.status === "clicked" ? "text-blue-600" :
+                  "text-[var(--muted)]"
+                }`}>
+                  {inv.status === "registered" ? "Registrerad" : inv.status === "clicked" ? "Klickad" : "Väntande"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </section>
 

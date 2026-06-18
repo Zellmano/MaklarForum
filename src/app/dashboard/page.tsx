@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format";
 import { getAgentGroupsForUser, getMessageThreads, getWatchedThreads } from "@/lib/data";
 import Link from "next/link";
 import InviteColleagueForm from "@/components/invite-colleague-form";
+import { sendInvitationReminderAction } from "@/app/dashboard/invite-actions";
 
 const verificationLabels: Record<string, string> = {
   pending: "Väntar på godkännande",
@@ -31,12 +32,12 @@ export default async function AgentDashboardPage() {
     verification = profile?.verification_status ?? "pending";
   }
 
-  let invitations: { id: string; email: string; status: string; created_at: string }[] = [];
+  let invitations: { id: string; email: string; status: string; created_at: string; reminded_at: string | null }[] = [];
   if (hasSupabaseEnv()) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("invitations")
-      .select("id, email, status, created_at")
+      .select("id, email, status, created_at, reminded_at")
       .eq("inviter_id", user.id)
       .order("created_at", { ascending: false })
       .limit(10);
@@ -171,17 +172,28 @@ export default async function AgentDashboardPage() {
               <h3 className="text-sm font-medium">Dina inbjudningar</h3>
               <div className="mt-2 space-y-2">
                 {invitations.map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-white p-2 text-sm">
+                  <div key={inv.id} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-white p-2 text-sm">
                     <span className="truncate">{inv.email}</span>
-                    <span className={`ml-2 shrink-0 text-xs ${
-                      inv.status === "registered" ? "text-emerald-600" :
-                      inv.status === "clicked" ? "text-blue-600" :
-                      "text-[var(--muted)]"
-                    }`}>
-                      {inv.status === "registered" ? "Registrerad!" :
-                       inv.status === "clicked" ? "Klickad" :
-                       "Väntande"}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={`text-xs ${
+                        inv.status === "registered" ? "text-emerald-600" :
+                        inv.status === "clicked" ? "text-blue-600" :
+                        "text-[var(--muted)]"
+                      }`}>
+                        {inv.status === "registered" ? "Registrerad!" :
+                         inv.status === "clicked" ? "Klickad" :
+                         "Väntande"}
+                      </span>
+                      {inv.status !== "registered" && (
+                        inv.reminded_at ? (
+                          <span className="text-xs text-[var(--muted)]">Påminnelse skickad</span>
+                        ) : (
+                          <form action={sendInvitationReminderAction.bind(null, inv.id)}>
+                            <button className="pill pill-light px-2 py-0.5 text-xs">Påminn</button>
+                          </form>
+                        )
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

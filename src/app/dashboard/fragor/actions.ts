@@ -6,6 +6,8 @@ import { toSlug } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canPublish } from "@/lib/moderation";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createNotifications } from "@/lib/notifications";
+import { emailNotificationsEnabled, sendNewGroupPostEmail } from "@/lib/email";
 
 const MAX_BODY_LENGTH = 10000;
 const MAX_TITLE_LENGTH = 200;
@@ -135,10 +137,72 @@ export async function askQuestionAction(_: ActionState | undefined, formData: Fo
       { question_id: inserted.id, user_id: user.id },
       { onConflict: "question_id,user_id" },
     );
+
+    if (groupId) {
+      await notifyNewGroupPost(supabase, groupId, user.id, user.fullName, title, questionSlug);
+    }
   }
 
   revalidatePath("/dashboard/fragor");
   return { success: "Frågan är publicerad." };
+}
+
+/**
+ * Notifies every member of a group (except the author) about a new post —
+ * both in-app and by email (respecting each member's mail-notification toggle).
+ */
+async function notifyNewGroupPost(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  groupId: string,
+  authorId: string,
+  authorName: string,
+  questionTitle: string,
+  questionSlug: string,
+) {
+  const [{ data: group }, { data: members }] = await Promise.all([
+    supabase.from("agent_groups").select("name").eq("id", groupId).maybeSingle(),
+    supabase
+      .from("agent_group_members")
+      .select("agent_id, profiles:agent_id(email, full_name, notification_prefs)")
+      .eq("group_id", groupId),
+  ]);
+
+  if (!group) return;
+
+  const recipients = (members ?? [])
+    .filter((m) => m.agent_id !== authorId)
+    .map((m) => {
+      const p = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+      return { agentId: m.agent_id, profile: p as { email: string | null; full_name: string | null; notification_prefs: Record<string, unknown> | null } | null };
+    })
+    .filter((r) => r.profile);
+
+  if (recipients.length === 0) return;
+
+  await createNotifications(
+    recipients.map((r) => ({
+      user_id: r.agentId,
+      type: "new_group_post" as const,
+      title: `Nytt inlägg i ${group.name}`,
+      body: questionTitle,
+      link: `/dashboard/fragor/${questionSlug}`,
+    })),
+  );
+
+  await Promise.all(
+    recipients
+      .filter((r) => r.profile?.email && emailNotificationsEnabled(r.profile.notification_prefs))
+      .map((r) =>
+        sendNewGroupPostEmail({
+          to: r.profile!.email!,
+          name: r.profile!.full_name ?? "",
+          groupName: group.name,
+          authorName,
+          questionTitle,
+          questionSlug,
+        }),
+      ),
+  );
 }
 
 export async function toggleWatchThreadAction(questionId: string, slug: string, watching: boolean) {
