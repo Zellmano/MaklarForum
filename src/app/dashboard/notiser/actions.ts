@@ -9,7 +9,7 @@ export async function openNotificationAction(notificationId: string, link: strin
   const user = await requireUser("/dashboard/notiser");
   const supabase = await createSupabaseServerClient();
   await supabase
-    .from("notifications")
+    .from("app_notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", notificationId)
     .eq("user_id", user.id);
@@ -21,7 +21,7 @@ export async function markAllNotificationsReadAction() {
   const user = await requireUser("/dashboard/notiser");
   const supabase = await createSupabaseServerClient();
   await supabase
-    .from("notifications")
+    .from("app_notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("user_id", user.id)
     .is("read_at", null);
@@ -33,7 +33,7 @@ export async function markNotificationReadAction(notificationId: string) {
   const user = await requireUser("/dashboard/notiser");
   const supabase = await createSupabaseServerClient();
   await supabase
-    .from("notifications")
+    .from("app_notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", notificationId)
     .eq("user_id", user.id);

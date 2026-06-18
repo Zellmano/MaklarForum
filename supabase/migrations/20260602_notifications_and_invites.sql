@@ -1,11 +1,11 @@
 -- ============================================================
--- In-app notifications + admin read access to invitations
+-- In-app app_notifications + admin read access to invitations
 -- Run in the SQL Editor of the production project (rjrj…).
 -- ============================================================
 
--- 1) In-app notifications (bell). Rows are created by server actions using the
+-- 1) In-app app_notifications (bell). Rows are created by server actions using the
 --    service-role key, so no INSERT policy is needed for normal users.
-create table if not exists notifications (
+create table if not exists app_notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
   type text not null,
@@ -16,17 +16,17 @@ create table if not exists notifications (
   created_at timestamptz not null default now()
 );
 
-alter table notifications enable row level security;
+alter table app_notifications enable row level security;
 
-create index if not exists idx_notifications_user_unread
-  on notifications(user_id, read_at, created_at desc);
+create index if not exists idx_app_notifications_user_unread
+  on app_notifications(user_id, read_at, created_at desc);
 
-drop policy if exists "notifications read own" on notifications;
-create policy "notifications read own" on notifications
+drop policy if exists "app_notifications read own" on app_notifications;
+create policy "app_notifications read own" on app_notifications
   for select to authenticated using (user_id = auth.uid());
 
-drop policy if exists "notifications update own" on notifications;
-create policy "notifications update own" on notifications
+drop policy if exists "app_notifications update own" on app_notifications;
+create policy "app_notifications update own" on app_notifications
   for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- 2) Let admins read every invitation (for the admin invitation-tracking view).

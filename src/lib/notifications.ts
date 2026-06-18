@@ -16,7 +16,7 @@ export async function createNotifications(rows: NotificationRow[]): Promise<void
   if (rows.length === 0) return;
   try {
     const admin = createSupabaseAdminClient();
-    const { error } = await admin.from("notifications").insert(rows);
+    const { error } = await admin.from("app_notifications").insert(rows);
     if (error) console.error("createNotifications failed", error);
   } catch (err) {
     console.error("createNotifications threw", err);
