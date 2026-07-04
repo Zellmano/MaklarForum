@@ -2,10 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { formatDate } from "@/lib/format";
-import { getAgentGroupsForUser, getMessageThreads, getWatchedThreads } from "@/lib/data";
+import { getAgentGroupsForUser, getAgents, getMessageThreads, getWatchedThreads } from "@/lib/data";
 import Link from "next/link";
 import InviteColleagueForm from "@/components/invite-colleague-form";
 import { sendInvitationReminderAction } from "@/app/dashboard/invite-actions";
+import { UserAvatar } from "@/components/user-avatar";
+import { memberTypeLabels } from "@/lib/types";
 
 const verificationLabels: Record<string, string> = {
   pending: "Väntar på godkännande",
@@ -44,13 +46,19 @@ export default async function AgentDashboardPage() {
     invitations = data ?? [];
   }
 
-  const [watchedThreads, messageThreads, groups] = await Promise.all([
+  const [watchedThreads, messageThreads, groups, agents] = await Promise.all([
     getWatchedThreads(user.id),
     getMessageThreads(user.id),
     getAgentGroupsForUser(user.id),
+    getAgents(),
   ]);
 
   const myGroups = groups.filter((g) => g.isMember);
+  const discoverGroups = groups
+    .filter((g) => g.status === "approved" && !g.isMember)
+    .sort((a, b) => b.memberCount - a.memberCount)
+    .slice(0, 5);
+  const newMembers = agents.filter((a) => a.id !== user.id).slice(0, 5);
 
   return (
     <div>
@@ -90,13 +98,13 @@ export default async function AgentDashboardPage() {
         </div>
       </div>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <article className="card">
           <div className="flex items-center justify-between">
             <h2 className="text-xl">Mina grupper</h2>
             <Link href="/dashboard/grupper" className="text-sm text-[var(--accent)]">Visa alla</Link>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-2">
             {myGroups.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">
                 Du är inte med i någon grupp ännu. <Link href="/dashboard/grupper" className="text-[var(--accent)]">Gå med eller skapa en</Link>.
@@ -106,17 +114,81 @@ export default async function AgentDashboardPage() {
               <Link
                 key={group.id}
                 href={`/dashboard/grupper/${group.slug}`}
-                className="block rounded-xl border border-[var(--line)] bg-white p-3"
+                className="block rounded-xl border border-[var(--line)] bg-white p-2.5 hover:border-[var(--accent)]"
               >
-                <p className="font-medium">{group.name}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {group.municipality || "-"} • {group.region || "-"} • {group.memberCount} medlemmar
+                <p className="text-sm font-medium">{group.name}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                  {group.municipality || group.region || "Sverige"} • {group.memberCount} medlemmar
                 </p>
               </Link>
             ))}
           </div>
         </article>
 
+        <article className="card">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl">Upptäck grupper</h2>
+            <Link href="/dashboard/grupper" className="text-sm text-[var(--accent)]">Alla grupper</Link>
+          </div>
+          <div className="mt-4 space-y-2">
+            {discoverGroups.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Du är med i alla tillgängliga grupper.</p>
+            ) : null}
+            {discoverGroups.map((group) => (
+              <Link
+                key={group.id}
+                href={`/dashboard/grupper/${group.slug}`}
+                className="block rounded-xl border border-[var(--line)] bg-white p-2.5 hover:border-[var(--accent)]"
+              >
+                <p className="text-sm font-medium">{group.name}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                  {group.municipality || group.region || "Sverige"} • {group.memberCount} medlemmar
+                </p>
+              </Link>
+            ))}
+          </div>
+        </article>
+
+        <article className="card md:col-span-2 xl:col-span-1">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl">Nya medlemmar</h2>
+            <Link href="/dashboard/medlemmar" className="text-sm text-[var(--accent)]">Visa alla</Link>
+          </div>
+          <div className="mt-4 space-y-2">
+            {newMembers.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Inga andra medlemmar ännu — bjud in en kollega!</p>
+            ) : null}
+            {newMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-white p-2.5"
+              >
+                <Link
+                  href={`/dashboard/medlemmar/${member.slug}`}
+                  className="flex min-w-0 items-center gap-2 hover:opacity-80"
+                >
+                  <UserAvatar url={member.avatarUrl} name={member.fullName} size="sm" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{member.fullName}</p>
+                    <p className="truncate text-xs text-[var(--muted)]">
+                      {(member.memberType && memberTypeLabels[member.memberType]) || "Mäklare"} • {member.firm || member.city || "-"}
+                    </p>
+                  </div>
+                </Link>
+                <Link
+                  href={`/dashboard/messages/${member.id}`}
+                  className="shrink-0 rounded-full border border-[var(--line)] px-2.5 py-1 text-xs hover:border-[var(--accent)]"
+                >
+                  Säg hej
+                </Link>
+              </div>
+            ))}
+          </div>
+        </article>
+
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <article className="card">
           <h2 className="text-xl">Bevakade trådar</h2>
           <div className="mt-4 space-y-3">
@@ -133,9 +205,7 @@ export default async function AgentDashboardPage() {
             ))}
           </div>
         </article>
-      </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-2">
         <article className="card">
           <div className="flex items-center justify-between">
             <h2 className="text-xl">Senaste meddelanden</h2>
@@ -159,7 +229,7 @@ export default async function AgentDashboardPage() {
           </div>
         </article>
 
-        <article className="card">
+        <article className="card lg:col-span-2">
           <h2 className="text-xl">Bjud in kollega</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Hjälp communityt växa — bjud in mäklarkollegor du vill ha med på MäklarForum. Max 3 per dag.

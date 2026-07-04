@@ -280,6 +280,44 @@ export async function leaveAgentGroupAction(groupId: string) {
   revalidatePath(`/dashboard/grupper/${groupId}`);
 }
 
+export async function removeGroupMemberAction(groupId: string, agentId: string) {
+  const user = await requireVerifiedAgent("/dashboard/grupper");
+  if (agentId === user.id) return; // use "Lämna grupp" instead
+
+  const supabase = await createSupabaseServerClient();
+  const { data: ownership } = await supabase
+    .from("agent_group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("agent_id", user.id)
+    .maybeSingle();
+
+  // Group owners manage their own members; site admins manage every group.
+  if (user.role !== "admin" && ownership?.role !== "owner") return;
+
+  // The delete needs the service-role client (RLS only allows self-removal),
+  // so re-check the target first: only site admins may remove an owner.
+  const admin = createSupabaseAdminClient();
+  const { data: target } = await admin
+    .from("agent_group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+
+  if (!target) return;
+  if (target.role === "owner" && user.role !== "admin") return;
+
+  await admin
+    .from("agent_group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("agent_id", agentId);
+
+  revalidatePath("/dashboard/grupper");
+  revalidatePath(`/dashboard/grupper/${groupId}`);
+}
+
 export async function approveJoinRequestAction(requestId: string) {
   const user = await requireVerifiedAgent("/dashboard/grupper");
   const supabase = await createSupabaseServerClient();

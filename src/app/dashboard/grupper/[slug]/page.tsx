@@ -4,7 +4,7 @@ import { requireAgent } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { UserAvatar } from "@/components/user-avatar";
-import { joinAgentGroupAction, leaveAgentGroupAction, approveJoinRequestAction, rejectJoinRequestAction } from "@/app/dashboard/actions";
+import { joinAgentGroupAction, leaveAgentGroupAction, approveJoinRequestAction, rejectJoinRequestAction, removeGroupMemberAction } from "@/app/dashboard/actions";
 import { formatDate } from "@/lib/format";
 import GroupInviteForm from "@/components/group-invite-form";
 import PollCreateForm from "@/components/poll-create-form";
@@ -284,19 +284,37 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ sl
             {visibleMembers.map((m) => {
               const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
               if (!profile) return null;
+              const canRemove =
+                canModerate &&
+                m.agent_id !== user.id &&
+                (m.role !== "owner" || isAdmin);
               return (
-                <Link
+                <div
                   key={m.agent_id}
-                  href={`/dashboard/medlemmar/${profile.profile_slug}`}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3 text-sm hover:border-[var(--accent)]"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-white p-3 text-sm"
                 >
-                  <UserAvatar url={(profile as { avatar_url?: string }).avatar_url} name={profile.full_name} size="sm" />
-                  <div>
-                    <p className="font-medium">{profile.full_name}</p>
-                    <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} &bull; {profile.city || "-"}</p>
-                    {m.role === "owner" ? <p className="text-xs text-[var(--accent)]">Ägare</p> : null}
-                  </div>
-                </Link>
+                  <Link
+                    href={`/dashboard/medlemmar/${profile.profile_slug}`}
+                    className="flex items-center gap-3 hover:opacity-80"
+                  >
+                    <UserAvatar url={(profile as { avatar_url?: string }).avatar_url} name={profile.full_name} size="sm" />
+                    <div>
+                      <p className="font-medium">{profile.full_name}</p>
+                      <p className="text-xs text-[var(--muted)]">{profile.firm || "-"} &bull; {profile.city || "-"}</p>
+                      {m.role === "owner" ? <p className="text-xs text-[var(--accent)]">Ägare</p> : null}
+                    </div>
+                  </Link>
+                  {canRemove ? (
+                    <form action={removeGroupMemberAction.bind(null, group.id, m.agent_id)}>
+                      <button
+                        className="pill pill-light px-2 py-0.5 text-xs text-red-700 hover:border-red-300"
+                        title={`Ta bort ${profile.full_name} ur gruppen`}
+                      >
+                        Ta bort
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               );
             })}
           </div>
