@@ -212,6 +212,12 @@ src/app/
 - WYSIWYG-editor för diskussioner
 - Bilagor i inlägg (bilder, PDF)
 - Sökfunktion
+- **Objektsamarbete:** två mäklare på olika firmor som delar samma kund/objekt
+  kan starta ett "samarbete" — en delad yta kopplad till båda profilerna med
+  egen konversation (bygger på DM-systemet), gemensamma anteckningar om
+  objektet och tydlig status (pågående/avslutat). Startas från motpartens
+  profilsida; kräver att båda accepterar (samma mönster som
+  `agent_connections`-förfrågningar).
 
 **V3 (3-6 månader):**
 - Mobilapp (PWA eller React Native)

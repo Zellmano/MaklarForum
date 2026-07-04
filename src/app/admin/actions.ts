@@ -57,6 +57,45 @@ export async function rejectAgentAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/** Block a member: content access is gated on verified status everywhere. */
+export async function suspendAgentAction(formData: FormData) {
+  await requireRole("admin", "/admin");
+  const agentId = String(formData.get("agent_id") ?? "");
+  if (!agentId) return;
+
+  const admin = createSupabaseAdminClient();
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", agentId)
+    .maybeSingle();
+
+  // Admins cannot be suspended from the UI.
+  if (!target || target.role === "admin") return;
+
+  await admin.from("profiles").update({ verification_status: "suspended" }).eq("id", agentId);
+
+  // Kill active sessions so the block takes effect immediately.
+  try {
+    await admin.auth.admin.signOut(agentId);
+  } catch {
+    // Older SDKs lack per-user signOut; the status gate still blocks content.
+  }
+
+  revalidatePath("/admin");
+}
+
+export async function reactivateAgentAction(formData: FormData) {
+  await requireRole("admin", "/admin");
+  const agentId = String(formData.get("agent_id") ?? "");
+  if (!agentId) return;
+
+  const admin = createSupabaseAdminClient();
+  await admin.from("profiles").update({ verification_status: "verified" }).eq("id", agentId);
+
+  revalidatePath("/admin");
+}
+
 export async function updateAgentEmailAction(formData: FormData) {
   await requireRole("admin", "/admin");
   const agentId = String(formData.get("agent_id") ?? "");

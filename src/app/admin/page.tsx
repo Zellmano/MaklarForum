@@ -6,21 +6,46 @@ import {
   approveGroupAction,
   approveModerationItemAction,
   deleteUserAction,
+  reactivateAgentAction,
   rejectAgentAction,
   rejectGroupAction,
   rejectModerationItemAction,
+  suspendAgentAction,
   updateAgentEmailAction,
 } from "@/app/admin/actions";
 import { formatDate } from "@/lib/format";
 
-export default async function AdminPage() {
+const memberTypeLabel: Record<string, string> = {
+  agent: "Mäklare",
+  assistant: "Assistent",
+  student: "Student",
+};
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   await requireRole("admin", "/admin");
+  const { q } = await searchParams;
+  const query = (q ?? "").trim();
 
   let metrics = { totalUsers: 0, verifiedAgents: 0, payingAgents: 0, flaggedItems: 0 };
   let pendingAgents: Awaited<ReturnType<typeof getPendingAgentVerifications>> = [];
   let pendingGroups: Awaited<ReturnType<typeof getPendingGroupApprovals>> = [];
   let pendingModeration: Awaited<ReturnType<typeof getPendingModerationItems>> = [];
-  let users: Array<{ id: string; full_name: string; email: string; role: string; verification_status: string; subscription_status: string }> = [];
+  let users: Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    role: string;
+    member_type: string | null;
+    firm: string | null;
+    city: string | null;
+    verification_status: string;
+    last_seen_at: string | null;
+    created_at: string;
+  }> = [];
   let invitations: Array<{ id: string; email: string; status: string; created_at: string; reminded_at: string | null; inviter: { full_name: string } | { full_name: string }[] | null }> = [];
 
   try {
@@ -31,12 +56,18 @@ export default async function AdminPage() {
       getPendingModerationItems(),
     ]);
     const supabase = await createSupabaseServerClient();
+    let usersQuery = supabase
+      .from("profiles")
+      .select("id, full_name, email, role, member_type, firm, city, verification_status, last_seen_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (query) {
+      usersQuery = usersQuery.or(
+        `full_name.ilike.%${query}%,email.ilike.%${query}%,firm.ilike.%${query}%,city.ilike.%${query}%`,
+      );
+    }
     const [{ data }, { data: inviteData }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, email, role, verification_status, subscription_status")
-        .order("created_at", { ascending: false })
-        .limit(20),
+      usersQuery,
       supabase
         .from("invitations")
         .select("id, email, status, created_at, reminded_at, inviter:inviter_id(full_name)")
@@ -78,7 +109,7 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+      <section className="mt-6">
         <div className="card">
           <h2 className="text-2xl">Verifieringskö</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">Godkänn eller neka mäklare efter manuell FMI-kontroll.</p>
@@ -104,23 +135,6 @@ export default async function AdminPage() {
           </div>
         </div>
 
-        <div className="card">
-          <h2 className="text-2xl">Byt mäklarens e-post</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Behåller samma profil-id så att alla historiska svar följer mäklaren vid firmabyte.
-          </p>
-          <form action={updateAgentEmailAction} className="mt-4 grid gap-3 text-sm">
-            <label>
-              Mäklar-ID
-              <input name="agent_id" required className="mt-1 w-full rounded-xl border border-[var(--line)] p-2" />
-            </label>
-            <label>
-              Ny företagsmail
-              <input name="new_email" type="email" required className="mt-1 w-full rounded-xl border border-[var(--line)] p-2" />
-            </label>
-            <button className="pill pill-dark w-fit">Uppdatera e-post</button>
-          </form>
-        </div>
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -215,20 +229,117 @@ export default async function AdminPage() {
       </section>
 
       <section className="mt-6 card">
-        <h2 className="text-2xl">Användare</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl">Användare</h2>
+          <form method="GET" className="flex gap-2">
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="Sök namn, mail, firma, stad..."
+              className="w-64 rounded-xl border border-[var(--line)] bg-white p-2 text-sm"
+            />
+            <button className="pill pill-light text-sm">Sök</button>
+          </form>
+        </div>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Blockera (pausar all tillgång direkt), byt e-post vid firmabyte, eller radera konto helt (GDPR).
+        </p>
         <div className="mt-4 space-y-3">
-          {(users ?? []).map((user) => (
-            <div key={user.id} className="rounded-xl border border-[var(--line)] bg-white p-3 text-sm">
-              <p className="font-semibold">{user.full_name} ({user.role})</p>
-              <p className="text-[var(--muted)]">
-                {user.email} | {user.verification_status} | {user.subscription_status}
-              </p>
-              <form action={deleteUserAction} className="mt-2">
-                <input type="hidden" name="user_id" value={user.id} />
-                <button className="pill pill-light">Ta bort konto</button>
-              </form>
-            </div>
-          ))}
+          {users.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              {query ? `Inga användare matchar "${query}".` : "Inga användare ännu."}
+            </p>
+          ) : null}
+          {users.map((user) => {
+            const suspended = user.verification_status === "suspended";
+            return (
+              <div key={user.id} className="rounded-xl border border-[var(--line)] bg-white p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">
+                      {user.full_name}
+                      <span className="ml-2 text-xs font-normal text-[var(--muted)]">
+                        {user.role === "admin"
+                          ? "Admin"
+                          : memberTypeLabel[user.member_type ?? "agent"] ?? "Mäklare"}
+                      </span>
+                      {suspended ? (
+                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                          Blockerad
+                        </span>
+                      ) : user.verification_status === "pending" ? (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          Väntar på godkännande
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-[var(--muted)]">
+                      {user.email} • {user.firm || "-"} • {user.city || "-"}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      Registrerad {formatDate(user.created_at)}
+                      {user.last_seen_at ? ` • Senast aktiv ${formatDate(user.last_seen_at)}` : ""}
+                    </p>
+                  </div>
+                  {user.role !== "admin" ? (
+                    <div className="flex shrink-0 gap-2">
+                      {suspended ? (
+                        <form action={reactivateAgentAction}>
+                          <input type="hidden" name="agent_id" value={user.id} />
+                          <button className="pill pill-dark text-xs">Återaktivera</button>
+                        </form>
+                      ) : (
+                        <form action={suspendAgentAction}>
+                          <input type="hidden" name="agent_id" value={user.id} />
+                          <button className="pill pill-light text-xs text-red-700">Blockera</button>
+                        </form>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+
+                {user.role !== "admin" ? (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-[var(--accent)]">
+                      Fler åtgärder (byt e-post, radera konto)
+                    </summary>
+                    <div className="mt-3 grid gap-4 border-t border-[var(--line)] pt-3 sm:grid-cols-2">
+                      <form action={updateAgentEmailAction} className="space-y-2">
+                        <p className="text-xs font-medium">Byt e-post (t.ex. vid firmabyte)</p>
+                        <input type="hidden" name="agent_id" value={user.id} />
+                        <input
+                          name="new_email"
+                          type="email"
+                          required
+                          placeholder="ny@maklarfirma.se"
+                          className="w-full rounded-xl border border-[var(--line)] p-2 text-sm"
+                        />
+                        <button className="pill pill-light text-xs">Uppdatera e-post</button>
+                        <p className="text-xs text-[var(--muted)]">
+                          Profilen och all historik behålls — bara inloggningsmailen byts.
+                        </p>
+                      </form>
+                      <form action={deleteUserAction} className="space-y-2">
+                        <p className="text-xs font-medium text-red-700">Radera konto permanent (GDPR)</p>
+                        <input type="hidden" name="user_id" value={user.id} />
+                        <input
+                          name="confirm_delete"
+                          required
+                          placeholder='Skriv "RADERA" för att bekräfta'
+                          className="w-full rounded-xl border border-red-200 p-2 text-sm"
+                        />
+                        <button className="pill pill-light text-xs text-red-700">Radera kontot</button>
+                        <p className="text-xs text-[var(--muted)]">
+                          Tar bort profil, inlägg och inloggning permanent. Kan inte ångras.
+                        </p>
+                      </form>
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>
