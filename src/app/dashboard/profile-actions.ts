@@ -123,6 +123,7 @@ export async function sendConnectionRequestAction(receiverId: string) {
   });
 
   revalidatePath("/dashboard/profil");
+  revalidatePath("/dashboard/medlemmar", "layout");
 }
 
 export async function acceptConnectionAction(connectionId: string) {
@@ -137,6 +138,7 @@ export async function acceptConnectionAction(connectionId: string) {
     .eq("status", "pending");
 
   revalidatePath("/dashboard/profil");
+  revalidatePath("/dashboard/medlemmar", "layout");
 }
 
 export async function removeConnectionAction(connectionId: string) {
@@ -150,4 +152,5 @@ export async function removeConnectionAction(connectionId: string) {
     .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`);
 
   revalidatePath("/dashboard/profil");
+  revalidatePath("/dashboard/medlemmar", "layout");
 }

@@ -225,7 +225,7 @@ export async function getAgentBySlug(slug: string) {
   const supabase = await createSupabaseServerClient();
   const { data: row } = await supabase
     .from("profiles")
-    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url")
+    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url, member_type, study_year")
     .eq("role", "agent")
     .eq("profile_slug", slug)
     .maybeSingle();
@@ -250,6 +250,10 @@ export async function getAgentBySlug(slug: string) {
     activeCount: 0,
     profileViews: 0,
     avatarUrl: row.avatar_url,
+    memberType: (row.member_type === "assistant" || row.member_type === "student"
+      ? row.member_type
+      : "agent") as "agent" | "assistant" | "student",
+    studyYear: (row.study_year as string | null) ?? null,
   };
 }
 
