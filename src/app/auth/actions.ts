@@ -132,16 +132,31 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
       return { error: `Kunde inte skapa profil: ${profileError.message}` };
     }
 
-    if (inviteToken) {
-      await supabase
+    // Mark matching invitations as registered — by token when the invite link
+    // was used, and always by email too: invitees often type in the site
+    // address themselves instead of clicking the tracked link.
+    try {
+      const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+      const admin = createSupabaseAdminClient();
+      const registeredFields = {
+        status: "registered",
+        registered_user_id: data.user.id,
+        registered_at: new Date().toISOString(),
+      };
+      if (inviteToken) {
+        await admin
+          .from("invitations")
+          .update(registeredFields)
+          .eq("token", inviteToken)
+          .eq("status", "pending");
+      }
+      await admin
         .from("invitations")
-        .update({
-          status: "registered",
-          registered_user_id: data.user.id,
-          registered_at: new Date().toISOString(),
-        })
-        .eq("token", inviteToken)
+        .update(registeredFields)
+        .ilike("email", email)
         .eq("status", "pending");
+    } catch (err) {
+      console.error("invitation status update failed", err);
     }
 
     await notifyAdminsOfNewRegistration({
