@@ -6,15 +6,24 @@ import { AuthHashHandler } from "@/components/auth-hash-handler";
 
 export const metadata: Metadata = {
   title: {
-    default: "Mäklarforum.se – Frågor & svar om bostadsköp och försäljning",
-    template: "%s | Mäklarforum.se",
+    default: "MäklarForum – Sveriges community för fastighetsmäklare",
+    template: "%s | MäklarForum",
   },
-  description: "Ställ frågor om bostadsköp och försäljning och få svar från verifierade fastighetsmäklare i Sverige. Guider, ordlista och mäklarprofiler.",
+  description:
+    "Slutet community för verifierade fastighetsmäklare i Sverige. Diskutera med kollegor i geografiska grupper, ställ frågor, rösta och bygg ditt nätverk.",
   metadataBase: new URL("https://maklarforum.se"),
   openGraph: {
     type: "website",
     locale: "sv_SE",
-    siteName: "Mäklarforum.se",
+    siteName: "MäklarForum",
+    title: "MäklarForum – Sveriges community för fastighetsmäklare",
+    description:
+      "Slutet community för verifierade fastighetsmäklare i Sverige. Geografiska grupper, frågor & svar, omröstningar och direktmeddelanden.",
+    images: [{ url: "/images/hero-bg.jpg", width: 1440, height: 640, alt: "MäklarForum" }],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

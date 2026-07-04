@@ -4,10 +4,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/app/auth/actions";
 
 const adminNav = [{ href: "/admin", label: "Admin" }];
-const roleLabel: Record<"consumer" | "agent" | "admin", string> = {
-  consumer: "Konsument",
+const memberTypeLabel: Record<"agent" | "assistant" | "student", string> = {
   agent: "Mäklare",
-  admin: "Admin",
+  assistant: "Assistent",
+  student: "Student",
 };
 
 export async function SiteHeader() {
@@ -70,7 +70,9 @@ export async function SiteHeader() {
                 )}
               </Link>
               <span className="hidden text-xs text-[var(--muted)] sm:inline">{user.fullName}</span>
-              <span className="pill pill-light">{roleLabel[user.role]}</span>
+              <span className="pill pill-light">
+                {user.role === "admin" ? "Admin" : memberTypeLabel[user.memberType]}
+              </span>
               <form action={signOutAction}>
                 <button className="pill pill-dark">Logga ut</button>
               </form>
@@ -81,7 +83,7 @@ export async function SiteHeader() {
                 Logga in
               </Link>
               <Link href="/register" className="pill pill-dark">
-                Skapa mäklarkonto
+                Skapa konto
               </Link>
             </>
           )}

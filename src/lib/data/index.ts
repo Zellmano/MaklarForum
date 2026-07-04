@@ -184,7 +184,7 @@ export async function getAgents() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url")
+    .select("id, full_name, profile_slug, firm, title, city, bio, fmi_number, verification_status, subscription_status, avatar_url, member_type, study_year")
     .eq("role", "agent")
     .eq("verification_status", "verified")
     .order("created_at", { ascending: false })
@@ -206,6 +206,10 @@ export async function getAgents() {
     fmiNumber: row.fmi_number ?? "",
     verificationStatus: row.verification_status,
     premium: row.subscription_status === "active",
+    memberType: (row.member_type === "assistant" || row.member_type === "student"
+      ? row.member_type
+      : "agent") as "agent" | "assistant" | "student",
+    studyYear: (row.study_year as string | null) ?? null,
     soldCount: 0,
     activeCount: 0,
     profileViews: 0,
@@ -475,7 +479,7 @@ export async function getAgentGroupsForUser(userId: string): Promise<AgentGroup[
   const [{ data: groups }, { data: memberships }] = await Promise.all([
     supabase
       .from("agent_groups")
-      .select("id, name, slug, description, municipality, region, status")
+      .select("id, name, slug, description, municipality, region, status, is_private, category")
       .in("status", ["approved", "pending"])
       .order("name", { ascending: true }),
     supabase.from("agent_group_members").select("group_id").eq("agent_id", userId),
@@ -507,6 +511,11 @@ export async function getAgentGroupsForUser(userId: string): Promise<AgentGroup[
     status: group.status,
     memberCount: memberCountMap.get(group.id) ?? 0,
     isMember: joined.has(group.id),
+    isPrivate: group.is_private ?? false,
+    category:
+      group.category === "city" || group.category === "firm" || group.category === "school"
+        ? group.category
+        : null,
   }));
 }
 

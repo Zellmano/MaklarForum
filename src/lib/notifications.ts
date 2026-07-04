@@ -2,7 +2,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export type NotificationRow = {
   user_id: string;
-  type: "new_message" | "new_group_post" | "group_approved" | "join_request";
+  type:
+    | "new_message"
+    | "new_group_post"
+    | "group_approved"
+    | "join_request"
+    | "admin_new_registration"
+    | "inactive_member";
   title: string;
   body?: string | null;
   link?: string | null;

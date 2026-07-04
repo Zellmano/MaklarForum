@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, touchLastSeen } from "@/lib/auth";
 
 const verifiedTabs = [
   { href: "/dashboard", label: "Översikt" },
@@ -24,6 +24,8 @@ export default async function AgentDashboardLayout({ children }: { children: Rea
   if (!user || user.role !== "agent") {
     return <>{children}</>;
   }
+
+  await touchLastSeen(user.id);
 
   const isVerified = user.verificationStatus === "verified";
   const isSuspended = user.verificationStatus === "suspended";

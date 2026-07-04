@@ -1,5 +1,13 @@
 export type UserRole = "consumer" | "agent" | "admin";
 
+export type MemberType = "agent" | "assistant" | "student";
+
+export const memberTypeLabels: Record<MemberType, string> = {
+  agent: "Mäklare",
+  assistant: "Assistent",
+  student: "Student",
+};
+
 export type VerificationStatus = "pending" | "verified" | "suspended";
 
 export type QuestionCategory = "kopa" | "salja" | "juridik" | "vardering" | "flytt" | "ovrigt";
@@ -22,6 +30,8 @@ export interface AgentProfile {
   activeCount: number;
   profileViews: number;
   avatarUrl?: string | null;
+  memberType?: MemberType;
+  studyYear?: string | null;
 }
 
 export interface Question {
@@ -96,6 +106,8 @@ export interface ConversationMessage {
   senderName: string;
 }
 
+export type GroupCategory = "city" | "firm" | "school";
+
 export interface AgentGroup {
   id: string;
   name: string;
@@ -106,6 +118,8 @@ export interface AgentGroup {
   status: "pending" | "approved" | "rejected";
   memberCount: number;
   isMember: boolean;
+  isPrivate: boolean;
+  category: GroupCategory | null;
 }
 
 export interface PendingModerationItem {

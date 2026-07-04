@@ -21,6 +21,14 @@ export default async function AgentGroupsPage() {
     .eq("status", "pending");
   const pendingGroupIds = new Set((pending ?? []).map((r) => r.group_id));
 
+  const discover = approved.filter((g) => !g.isMember);
+  const groupSections = [
+    { title: "Städer", groups: discover.filter((g) => g.category === "city") },
+    { title: "Mäklarfirmor & kedjor", groups: discover.filter((g) => g.category === "firm") },
+    { title: "Högskolor & utbildningar", groups: discover.filter((g) => g.category === "school") },
+    { title: "Övriga grupper", groups: discover.filter((g) => g.category === null) },
+  ];
+
   if (user.role === "admin") {
     return (
       <div>
@@ -61,9 +69,10 @@ export default async function AgentGroupsPage() {
 
   return (
     <div>
-      <h1 className="text-4xl">Mäklargrupper</h1>
+      <h1 className="text-4xl">Grupper</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Geografiska och nischade grupper. Skicka en ansökan för att gå med — gruppens admin godkänner nya medlemmar.
+        Städer, mäklarfirmor, skolor och nischade grupper. Öppna grupper går du med i direkt —
+        privata grupper kräver att gruppens admin godkänner din ansökan.
       </p>
 
       <section className="mt-6 card">
@@ -100,41 +109,49 @@ export default async function AgentGroupsPage() {
         </div>
       </section>
 
-      <section className="mt-6 card">
-        <h2 className="text-xl">Upptäck grupper</h2>
-        <div className="mt-4 space-y-3">
-          {approved.filter((g) => !g.isMember).length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Du är redan med i alla tillgängliga grupper.</p>
-          ) : null}
-          {approved.filter((g) => !g.isMember).map((group) => (
-            <article key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/dashboard/grupper/${group.slug}`} className="font-semibold hover:text-[var(--accent)]">
-                      {group.name}
-                    </Link>
+      {groupSections.map(({ title, groups: sectionGroups }) =>
+        sectionGroups.length === 0 ? null : (
+          <section key={title} className="mt-6 card">
+            <h2 className="text-xl">{title}</h2>
+            <div className="mt-4 space-y-3">
+              {sectionGroups.map((group) => (
+                <article key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/dashboard/grupper/${group.slug}`} className="font-semibold hover:text-[var(--accent)]">
+                          {group.name}
+                        </Link>
+                        {group.isPrivate ? (
+                          <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10px] text-[var(--muted)]">
+                            Privat
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-[var(--muted)]">
+                        {group.municipality || "-"} • {group.region || "-"}
+                      </p>
+                      {group.description ? <p className="mt-1 text-sm text-[var(--muted)]">{group.description}</p> : null}
+                    </div>
+                    <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
                   </div>
-                  <p className="text-sm text-[var(--muted)]">
-                    {group.municipality || "-"} • {group.region || "-"}
-                  </p>
-                  {group.description ? <p className="mt-1 text-sm text-[var(--muted)]">{group.description}</p> : null}
-                </div>
-                <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
-              </div>
-              <div className="mt-3">
-                {pendingGroupIds.has(group.id) ? (
-                  <span className="pill pill-light opacity-60">Ansökan inskickad</span>
-                ) : (
-                  <form action={joinAgentGroupAction.bind(null, group.id)}>
-                    <button className="pill pill-dark">Ansök om medlemskap</button>
-                  </form>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+                  <div className="mt-3">
+                    {pendingGroupIds.has(group.id) ? (
+                      <span className="pill pill-light opacity-60">Ansökan inskickad</span>
+                    ) : (
+                      <form action={joinAgentGroupAction.bind(null, group.id)}>
+                        <button className="pill pill-dark">
+                          {group.isPrivate ? "Ansök om medlemskap" : "Gå med"}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ),
+      )}
     </div>
   );
 }

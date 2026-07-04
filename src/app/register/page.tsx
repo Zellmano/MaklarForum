@@ -6,9 +6,10 @@ export default async function RegisterAgentPage({ searchParams }: { searchParams
   return (
     <div className="mx-auto max-w-lg">
       <div className="card">
-        <h1 className="text-3xl">Registrera mäklarprofil</h1>
+        <h1 className="text-3xl">Skapa ditt konto</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Endast företagsmail tillåts. Profilen granskas manuellt innan aktivering.
+          För mäklare, mäklarassistenter och mäklarstudenter. Profilen granskas manuellt innan
+          aktivering.
         </p>
         {ref && (
           <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-sm text-emerald-800">

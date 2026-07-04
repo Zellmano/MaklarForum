@@ -9,6 +9,13 @@ export default async function OnboardingPage() {
   const approved = groups.filter((g) => g.status === "approved");
   const myCount = groups.filter((g) => g.isMember).length;
 
+  const sections = [
+    { title: "Din stad", groups: approved.filter((g) => g.category === "city") },
+    { title: "Din mäklarfirma", groups: approved.filter((g) => g.category === "firm") },
+    { title: "Din skola", groups: approved.filter((g) => g.category === "school") },
+    { title: "Övriga grupper", groups: approved.filter((g) => g.category === null) },
+  ];
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="card">
@@ -24,34 +31,42 @@ export default async function OnboardingPage() {
           </div>
         ) : null}
 
-        <div className="mt-6 space-y-3">
-          {approved.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Inga grupper finns ännu. Du kan skapa en själv från dashboarden!</p>
-          ) : null}
-          {approved.map((group) => (
-            <article key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{group.name}</p>
-                  <p className="text-sm text-[var(--muted)]">
-                    {group.municipality || "-"} | {group.region || "-"}
-                  </p>
-                  {group.description ? <p className="mt-1 text-sm text-[var(--muted)]">{group.description}</p> : null}
-                </div>
-                <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
+        {approved.length === 0 ? (
+          <p className="mt-6 text-sm text-[var(--muted)]">Inga grupper finns ännu. Du kan skapa en själv från dashboarden!</p>
+        ) : null}
+        {sections.map(({ title, groups: sectionGroups }) =>
+          sectionGroups.length === 0 ? null : (
+            <div key={title} className="mt-6">
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <div className="mt-3 space-y-3">
+                {sectionGroups.map((group) => (
+                  <article key={group.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{group.name}</p>
+                        <p className="text-sm text-[var(--muted)]">
+                          {group.municipality || "-"} | {group.region || "-"}
+                        </p>
+                      </div>
+                      <p className="text-xs text-[var(--muted)]">{group.memberCount} medlemmar</p>
+                    </div>
+                    <div className="mt-3">
+                      {group.isMember ? (
+                        <span className="pill pill-light">Du är medlem</span>
+                      ) : (
+                        <form action={joinAgentGroupAction.bind(null, group.id)}>
+                          <button className="pill pill-dark">
+                            {group.isPrivate ? "Ansök om medlemskap" : "Gå med"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className="mt-3">
-                {group.isMember ? (
-                  <span className="pill pill-light">Du är medlem</span>
-                ) : (
-                  <form action={joinAgentGroupAction.bind(null, group.id)}>
-                    <button className="pill pill-dark">Gå med</button>
-                  </form>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
+            </div>
+          ),
+        )}
 
         <div className="mt-8 flex justify-between gap-3">
           <Link href="/dashboard" className="pill pill-light">Hoppa över</Link>

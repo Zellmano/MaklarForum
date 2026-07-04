@@ -53,6 +53,12 @@ export async function loginAction(_: { error?: string } | undefined, formData: F
   redirect(next);
 }
 
+const memberTypeLabels: Record<string, string> = {
+  agent: "Mäklare",
+  assistant: "Mäklarassistent",
+  student: "Mäklarstudent",
+};
+
 export async function registerAgentAction(_: { error?: string } | undefined, formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -60,9 +66,17 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
   const firm = String(formData.get("firm") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const inviteToken = String(formData.get("invite_token") ?? "").trim();
+  const memberTypeInput = String(formData.get("member_type") ?? "agent").trim();
+  const memberType = ["agent", "assistant", "student"].includes(memberTypeInput)
+    ? (memberTypeInput as "agent" | "assistant" | "student")
+    : "agent";
+  const studyYear =
+    memberType === "student" ? String(formData.get("study_year") ?? "").trim().slice(0, 20) || null : null;
 
   const domain = email.split("@")[1] ?? "";
-  if (!domain || blockedPersonalDomains.has(domain)) {
+  // Students rarely have a company address yet — they may register with a
+  // personal email. The manual admin approval is still the real gate.
+  if (!domain || (memberType !== "student" && blockedPersonalDomains.has(domain))) {
     return { error: "Du måste registrera dig med din företagsmail (inte gmail/hotmail/outlook etc.)." };
   }
 
@@ -73,9 +87,11 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
     options: {
       data: {
         role: "agent",
+        member_type: memberType,
         full_name: fullName,
         firm,
         city,
+        study_year: studyYear,
       },
     },
   });
@@ -92,10 +108,12 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: data.user.id,
       role: "agent",
+      member_type: memberType,
       full_name: fullName,
       email,
       firm,
       city,
+      study_year: studyYear,
       verification_status: "pending",
       profile_slug: slug,
       accepted_terms_at: new Date().toISOString(),
@@ -125,9 +143,57 @@ export async function registerAgentAction(_: { error?: string } | undefined, for
         .eq("token", inviteToken)
         .eq("status", "pending");
     }
+
+    await notifyAdminsOfNewRegistration({
+      applicantName: fullName,
+      applicantEmail: email,
+      memberType,
+      firm,
+      city,
+    });
   }
 
   redirect("/onboarding");
+}
+
+/** Alerts admins (in-app + email) that a new profile awaits review. Never throws. */
+async function notifyAdminsOfNewRegistration(params: {
+  applicantName: string;
+  applicantEmail: string;
+  memberType: "agent" | "assistant" | "student";
+  firm: string;
+  city: string;
+}): Promise<void> {
+  const label = memberTypeLabels[params.memberType] ?? "Mäklare";
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    const { createNotifications } = await import("@/lib/notifications");
+    const admin = createSupabaseAdminClient();
+
+    const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+    await createNotifications(
+      (admins ?? []).map((a) => ({
+        user_id: a.id,
+        type: "admin_new_registration" as const,
+        title: "Ny registrering väntar på granskning",
+        body: `${params.applicantName} (${label}) — ${params.firm}, ${params.city}`,
+        link: "/admin",
+      })),
+    );
+
+    const adminEmail = process.env.ADMIN_EMAIL ?? "maklarforum@gmail.com";
+    const { sendAdminNewRegistrationEmail } = await import("@/lib/email");
+    await sendAdminNewRegistrationEmail({
+      to: adminEmail,
+      applicantName: params.applicantName,
+      applicantEmail: params.applicantEmail,
+      memberTypeLabel: label,
+      firm: params.firm,
+      city: params.city,
+    });
+  } catch (err) {
+    console.error("notifyAdminsOfNewRegistration failed", err);
+  }
 }
 
 export async function signOutAction() {

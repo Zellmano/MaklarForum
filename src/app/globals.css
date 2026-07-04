@@ -18,7 +18,7 @@
      the warm gradient underneath. */
   --app-bg-image: url("/images/site-bg.svg");
   --app-bg-opacity: 0.45;
-  --hero-bg-image: url("/images/hero-bg.svg");
+  --hero-bg-image: url("/images/hero-bg.jpg");
 }
 
 @theme inline {

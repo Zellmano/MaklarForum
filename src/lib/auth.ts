@@ -2,14 +2,22 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { toSlug } from "@/lib/format";
-import { UserRole } from "@/lib/types";
+import { MemberType, UserRole } from "@/lib/types";
 
 export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  memberType: MemberType;
   fullName: string;
   verificationStatus: "pending" | "verified" | "suspended" | null;
+}
+
+function normalizeMemberType(input: unknown): MemberType {
+  if (input === "assistant" || input === "student") {
+    return input;
+  }
+  return "agent";
 }
 
 function normalizeRole(input: unknown): UserRole | null {
@@ -33,7 +41,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, verification_status")
+    .select("id, email, full_name, role, member_type, verification_status")
     .eq("id", authData.user.id)
     .maybeSingle();
 
@@ -54,6 +62,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       email: string;
       full_name: string;
       role: UserRole;
+      member_type: MemberType;
       city?: string;
       firm?: string;
       fmi_number?: string;
@@ -65,6 +74,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       email: authData.user.email ?? "",
       full_name: fullName || "Användare",
       role,
+      member_type: normalizeMemberType(meta.member_type),
       accepted_terms_at: new Date().toISOString(),
     };
 
@@ -81,7 +91,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     await supabase.from("profiles").upsert(insertPayload);
     const retry = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, verification_status")
+      .select("id, email, full_name, role, member_type, verification_status")
       .eq("id", authData.user.id)
       .maybeSingle();
     profile = retry.data ?? null;
@@ -96,8 +106,28 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     email: profile.email,
     fullName: profile.full_name,
     role: profile.role,
+    memberType: normalizeMemberType(profile.member_type),
     verificationStatus: profile.verification_status ?? null,
   };
+}
+
+/**
+ * Bumps profiles.last_seen_at for the inactivity reminder, throttled to once
+ * per hour (the filter makes repeat calls a no-op write). Never throws.
+ */
+export async function touchLastSeen(userId: string): Promise<void> {
+  if (!hasSupabaseEnv()) return;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await supabase
+      .from("profiles")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("id", userId)
+      .lt("last_seen_at", oneHourAgo);
+  } catch {
+    // Activity tracking must never break a page render.
+  }
 }
 
 export async function requireUser(nextPath = "/dashboard") {

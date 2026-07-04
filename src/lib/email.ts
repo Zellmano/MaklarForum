@@ -153,6 +153,53 @@ export async function sendInvitationReminderEmail(params: {
   });
 }
 
+export async function sendAdminNewRegistrationEmail(params: {
+  to: string;
+  applicantName: string;
+  applicantEmail: string;
+  memberTypeLabel: string;
+  firm: string;
+  city: string;
+}): Promise<void> {
+  const href = `${appUrl()}/admin`;
+  await sendEmail({
+    to: params.to,
+    subject: `Ny registrering väntar på granskning: ${params.applicantName}`,
+    html: layout(
+      "Ny registrering väntar på granskning",
+      `<p>En ny person har registrerat sig på MäklarForum:</p>
+       <p style="padding:10px 14px;background:#f3f1ec;border-radius:10px">
+         <strong>${escapeHtml(params.applicantName)}</strong> (${escapeHtml(params.memberTypeLabel)})<br/>
+         ${escapeHtml(params.applicantEmail)}<br/>
+         ${escapeHtml(params.firm)} — ${escapeHtml(params.city)}
+       </p>
+       <p>Granska och godkänn profilen i admin-panelen.</p>`,
+      "Öppna admin-panelen",
+      href,
+    ),
+  });
+}
+
+export async function sendReactivationEmail(params: {
+  to: string;
+  name: string;
+}): Promise<void> {
+  const href = `${appUrl()}/dashboard`;
+  await sendEmail({
+    to: params.to,
+    subject: "Vi saknar dig på MäklarForum!",
+    html: layout(
+      `Vi saknar dig, ${escapeHtml(params.name.split(" ")[0])}!`,
+      `<p>Hej ${escapeHtml(params.name)},</p>
+       <p>Det var ett tag sedan du var inne på MäklarForum. Sedan sist har det hänt en hel del —
+       nya diskussioner, omröstningar och kollegor i dina grupper väntar på dig.</p>
+       <p>Kom in och kika, ditt konto finns kvar precis som du lämnade det.</p>`,
+      "Till MäklarForum",
+      href,
+    ),
+  });
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

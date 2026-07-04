@@ -20,25 +20,26 @@ export default async function Home() {
         <div className="hero-image absolute inset-0" aria-hidden="true" />
         <div className="hero-overlay absolute inset-0" aria-hidden="true" />
         <div className="relative">
-          <p className="pill pill-light">Beta 2026 • Endast för verifierade mäklare</p>
+          <p className="pill pill-light">Beta 2026 • Ett slutet community för mäklarbranschen</p>
           <h1 className="mt-4 max-w-3xl text-4xl leading-tight sm:text-5xl">
-            Sveriges största community för fastighetsmäklare.
+            Mötesplatsen för Sveriges fastighetsmäklare.
           </h1>
           <p className="mt-4 max-w-3xl text-[var(--ink)]">
-            MäklarForum är ett slutet community där du som mäklare kan skapa grupper i området du
-            bor eller i kedjan du jobbar i och diskutera allt från vardagsfrågor med kollegor i din
-            kommun, region eller hela landet till juridik och sälj.
+            MäklarForum är ett slutet community för mäklare, mäklarassistenter och mäklarstudenter.
+            Skapa grupper i området du bor eller i kedjan du jobbar i och diskutera allt från
+            vardagsfrågor med kollegor i din kommun, region eller hela landet till juridik och sälj.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/register" className="pill pill-dark">
-              Skapa mäklarkonto
+              Skapa konto
             </Link>
             <Link href="/login" className="pill pill-light">
               Logga in
             </Link>
           </div>
           <p className="mt-4 text-xs text-[var(--muted)]">
-            Du behöver företagsmail för att registrera dig. Profilen godkänns manuellt av admin innan du får tillgång.
+            Mäklare och assistenter registrerar sig med företagsmail — studenter med sin
+            studentmail. Varje profil godkänns manuellt av admin innan du får tillgång.
           </p>
         </div>
       </section>
@@ -137,7 +138,8 @@ export default async function Home() {
         <h2 className="text-2xl">Så funkar det</h2>
         <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm">
           <li>
-            <strong>Registrera dig</strong> med ditt namn, företagsmail, mäklarfirma och stad.
+            <strong>Registrera dig</strong> som mäklare, assistent eller student — med namn,
+            e-post, arbetsplats eller utbildning och stad.
           </li>
           <li>
             <strong>Admin verifierar</strong> profilen manuellt (vanligtvis inom 24 timmar).
@@ -149,6 +151,53 @@ export default async function Home() {
             <strong>Börja diskutera</strong> med andra verifierade mäklare i hela Sverige.
           </li>
         </ol>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-2xl">Vanliga frågor</h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <article className="card">
+            <h3 className="font-semibold">Vem kan gå med?</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Alla inom mäklarbranschen: fastighetsmäklare, mäklarassistenter och mäklarstudenter.
+              Mäklare och assistenter registrerar sig med företagsmail, studenter med sin privata
+              mail eller studentmail. Varje profil granskas manuellt innan den aktiveras.
+            </p>
+          </article>
+          <article className="card">
+            <h3 className="font-semibold">Kostar det något?</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Nej, MäklarForum är helt gratis under betaperioden. Alla funktioner ingår — grupper,
+              diskussioner, omröstningar och direktmeddelanden.
+            </p>
+          </article>
+          <article className="card">
+            <h3 className="font-semibold">Kan kunder eller allmänheten se det jag skriver?</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Nej. Allt innehåll ligger bakom inloggning och är bara synligt för verifierade
+              mäklare. MäklarForum är en sluten yrkesplattform, inte ett publikt forum.
+            </p>
+          </article>
+          <article className="card">
+            <h3 className="font-semibold">Hur hanteras mina uppgifter?</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              All data lagras inom EU och hanteras enligt GDPR. Du kan när som helst exportera din
+              data eller radera ditt konto själv under din profil.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="mt-10 rounded-3xl border border-[var(--line)] bg-[#104a4d] p-8 text-center text-[#f8fcfb] sm:p-10">
+        <h2 className="text-2xl sm:text-3xl">Redo att träffa dina kollegor?</h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-[#cfe3e0]">
+          Skapa ditt konto idag — verifieringen tar vanligtvis mindre än ett dygn.
+        </p>
+        <div className="mt-5 flex justify-center">
+          <Link href="/register" className="pill pill-gold">
+            Skapa konto gratis
+          </Link>
+        </div>
       </section>
     </div>
   );
