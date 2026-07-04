@@ -120,6 +120,7 @@ export interface AgentGroup {
   isMember: boolean;
   isPrivate: boolean;
   category: GroupCategory | null;
+  emailDomain: string | null;
 }
 
 export interface PendingModerationItem {

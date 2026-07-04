@@ -479,7 +479,7 @@ export async function getAgentGroupsForUser(userId: string): Promise<AgentGroup[
   const [{ data: groups }, { data: memberships }] = await Promise.all([
     supabase
       .from("agent_groups")
-      .select("id, name, slug, description, municipality, region, status, is_private, category")
+      .select("id, name, slug, description, municipality, region, status, is_private, category, email_domain")
       .in("status", ["approved", "pending"])
       .order("name", { ascending: true }),
     supabase.from("agent_group_members").select("group_id").eq("agent_id", userId),
@@ -516,6 +516,7 @@ export async function getAgentGroupsForUser(userId: string): Promise<AgentGroup[
       group.category === "city" || group.category === "firm" || group.category === "school"
         ? group.category
         : null,
+    emailDomain: (group.email_domain as string | null) ?? null,
   }));
 }
 

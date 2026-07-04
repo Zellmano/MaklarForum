@@ -183,7 +183,7 @@ export async function joinAgentGroupAction(groupId: string) {
 
   const { data: group } = await supabase
     .from("agent_groups")
-    .select("id, is_private, status")
+    .select("id, name, slug, is_private, status, email_domain")
     .eq("id", groupId)
     .maybeSingle();
 
@@ -191,7 +191,21 @@ export async function joinAgentGroupAction(groupId: string) {
     return;
   }
 
-  if (group.is_private) {
+  // A company email on the group's domain (e.g. namn@bjurfors.se for the
+  // Bjurfors group) proves affiliation — join instantly without approval.
+  const userDomain = user.email.split("@")[1]?.toLowerCase() ?? "";
+  const domainMatch =
+    !!group.email_domain && userDomain === group.email_domain.toLowerCase();
+
+  if (!group.is_private || domainMatch) {
+    // upsert keeps double-click idempotent.
+    await supabase
+      .from("agent_group_members")
+      .upsert(
+        { group_id: groupId, agent_id: user.id, role: "member" },
+        { onConflict: "group_id,agent_id" },
+      );
+  } else {
     // Unique (group_id, agent_id, status) guards against duplicates from
     // double-clicks; ignore the conflict silently.
     const { error } = await supabase.from("group_join_requests").insert({
@@ -201,19 +215,51 @@ export async function joinAgentGroupAction(groupId: string) {
     });
     if (error && !error.message.includes("duplicate")) {
       console.error("joinAgentGroupAction join_request failed", error);
+    } else if (!error) {
+      await notifyJoinRequestReviewers(group.id, group.name, group.slug, user.fullName);
     }
-  } else {
-    // upsert keeps double-click idempotent.
-    await supabase
-      .from("agent_group_members")
-      .upsert(
-        { group_id: groupId, agent_id: user.id, role: "member" },
-        { onConflict: "group_id,agent_id" },
-      );
   }
 
   revalidatePath("/dashboard/grupper");
   revalidatePath(`/dashboard/grupper/${groupId}`);
+}
+
+/** In-app notification to group owners + site admins when someone applies. */
+async function notifyJoinRequestReviewers(
+  groupId: string,
+  groupName: string,
+  groupSlug: string,
+  applicantName: string,
+): Promise<void> {
+  try {
+    const admin = createSupabaseAdminClient();
+    const [{ data: owners }, { data: admins }] = await Promise.all([
+      admin
+        .from("agent_group_members")
+        .select("agent_id")
+        .eq("group_id", groupId)
+        .eq("role", "owner"),
+      admin.from("profiles").select("id").eq("role", "admin"),
+    ]);
+
+    const recipients = new Set<string>([
+      ...(owners ?? []).map((o) => o.agent_id),
+      ...(admins ?? []).map((a) => a.id),
+    ]);
+
+    const { createNotifications } = await import("@/lib/notifications");
+    await createNotifications(
+      [...recipients].map((userId) => ({
+        user_id: userId,
+        type: "join_request" as const,
+        title: `Ny ansökan till ${groupName}`,
+        body: `${applicantName} vill gå med i gruppen.`,
+        link: `/dashboard/grupper/${groupSlug}`,
+      })),
+    );
+  } catch (err) {
+    console.error("notifyJoinRequestReviewers failed", err);
+  }
 }
 
 export async function leaveAgentGroupAction(groupId: string) {

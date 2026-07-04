@@ -8,6 +8,7 @@ export default async function OnboardingPage() {
   const groups = await getAgentGroupsForUser(user.id);
   const approved = groups.filter((g) => g.status === "approved");
   const myCount = groups.filter((g) => g.isMember).length;
+  const userEmailDomain = user.email.split("@")[1]?.toLowerCase() ?? "";
 
   const sections = [
     { title: "Din stad", groups: approved.filter((g) => g.category === "city") },
@@ -56,7 +57,10 @@ export default async function OnboardingPage() {
                       ) : (
                         <form action={joinAgentGroupAction.bind(null, group.id)}>
                           <button className="pill pill-dark">
-                            {group.isPrivate ? "Ansök om medlemskap" : "Gå med"}
+                            {!group.isPrivate ||
+                            (group.emailDomain && userEmailDomain === group.emailDomain.toLowerCase())
+                              ? "Gå med"
+                              : "Ansök om medlemskap"}
                           </button>
                         </form>
                       )}
